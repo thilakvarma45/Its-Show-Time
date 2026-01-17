@@ -12,7 +12,7 @@ const Home = ({ onMovieSelect, onEventSelect, user }) => {
         className="mb-12"
       >
         <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-2 tracking-widest uppercase">
-          CineVerse
+          Its Show Time
         </h1>
         <p className="text-slate-600 text-lg">
           {user?.name ? `Welcome back, ${user.name}.` : 'Discover Your Next Experience'}

@@ -172,8 +172,8 @@ const Auth = ({ onAuthSuccess }) => {
                 className="flex items-center justify-center gap-2 mb-4"
               >
                 <Sparkles className={`w-8 h-8 ${isUser ? 'text-amber-400' : 'text-indigo-400'}`} />
-                <h1 className="text-3xl md:text-4xl font-bold text-white uppercase tracking-widest">
-                  CineVerse
+                <h1 className="text-3xl md:text-3xl font-bold text-white uppercase tracking-widest">
+                  Its Show Time
                 </h1>
               </motion.div>
               
@@ -362,9 +362,9 @@ const Auth = ({ onAuthSuccess }) => {
                 } text-white rounded-xl font-semibold uppercase tracking-wider transition-all transform hover:scale-[1.02]`}
               >
                 {isLogin 
-                  ? 'Get My Ticket' 
+                  ? 'Login' 
                   : isUser 
-                    ? 'Get My Ticket' 
+                    ? 'Register' 
                     : 'Open Box Office'
                 }
               </motion.button>

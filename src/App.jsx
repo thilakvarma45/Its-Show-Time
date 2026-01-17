@@ -136,9 +136,9 @@ function App() {
     <div className="min-h-screen bg-cinema-light text-white">
       <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 backdrop-blur-lg bg-black/30 sticky top-0 z-20">
         <div>
-          <p className="text-xl font-semibold tracking-wide uppercase">CineVerse</p>
+          <p className="text-xl font-semibold tracking-wide uppercase">ITS SHOW TIME</p>
           <p className="text-sm text-white/70">
-            Welcome back, {user?.name || (user?.role === 'owner' ? 'Producer' : 'Audience')}
+            Welcome back, {user?.name || (user?.role === 'owner' ? 'Producer' : 'macha')}
           </p>
         </div>
         <div className="flex items-center gap-3">
