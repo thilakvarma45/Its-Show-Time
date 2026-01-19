@@ -111,12 +111,12 @@ const Auth = ({ onAuthSuccess }) => {
   const isUser = role === 'user';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 relative overflow-hidden">
       {/* Animated Background Effects */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Spotlight Effect */}
+        {/* Subtle Gradient Effects */}
         <motion.div
-          className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"
+          className="absolute top-0 left-1/4 w-96 h-96 bg-violet-100/50 rounded-full blur-3xl"
           animate={{
             x: [0, 100, 0],
             y: [0, 50, 0],
@@ -129,7 +129,7 @@ const Auth = ({ onAuthSuccess }) => {
           }}
         />
         <motion.div
-          className="absolute bottom-0 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl"
+          className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-100/50 rounded-full blur-3xl"
           animate={{
             x: [0, -100, 0],
             y: [0, -50, 0],
@@ -142,15 +142,6 @@ const Auth = ({ onAuthSuccess }) => {
             delay: 1
           }}
         />
-        
-        {/* Grain Texture */}
-        <div 
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-            backgroundSize: '200px 200px'
-          }}
-        />
       </div>
 
       {/* Main Content */}
@@ -161,8 +152,8 @@ const Auth = ({ onAuthSuccess }) => {
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          {/* Glass Card */}
-          <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8 md:p-10">
+          {/* Card */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 md:p-10">
             {/* Header */}
             <div className="text-center mb-8">
               <motion.div
@@ -171,8 +162,8 @@ const Auth = ({ onAuthSuccess }) => {
                 transition={{ delay: 0.2 }}
                 className="flex items-center justify-center gap-2 mb-4"
               >
-                <Sparkles className={`w-8 h-8 ${isUser ? 'text-amber-400' : 'text-indigo-400'}`} />
-                <h1 className="text-3xl md:text-3xl font-bold text-white uppercase tracking-widest">
+                <Sparkles className={`w-8 h-8 ${isUser ? 'text-amber-500' : 'text-violet-600'}`} />
+                <h1 className="text-3xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent uppercase tracking-widest">
                   Its Show Time
                 </h1>
               </motion.div>
@@ -183,7 +174,7 @@ const Auth = ({ onAuthSuccess }) => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className={`text-xl md:text-2xl font-semibold ${isUser ? 'text-amber-400' : 'text-indigo-400'} uppercase tracking-wider`}
+                  className={`text-xl md:text-2xl font-semibold ${isUser ? 'text-amber-600' : 'text-violet-600'} uppercase tracking-wider`}
                 >
                   {isLogin ? 'Back to the Movies' : 'Premiere Your Account'}
                 </motion.h2>
@@ -198,7 +189,7 @@ const Auth = ({ onAuthSuccess }) => {
                 exit={{ opacity: 0, height: 0 }}
                 className="mb-6"
               >
-                <label className="block text-white/70 text-sm mb-3 uppercase tracking-wider text-center">
+                <label className="block text-slate-600 text-sm mb-3 uppercase tracking-wider text-center font-semibold">
                   Choose Your Role
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -208,15 +199,15 @@ const Auth = ({ onAuthSuccess }) => {
                     onClick={() => setRole('user')}
                     className={`p-4 rounded-xl border-2 transition-all ${
                       isUser
-                        ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/20'
-                        : 'border-white/10 bg-white/5 hover:border-white/20'
+                        ? 'border-amber-400 bg-amber-50 shadow-lg shadow-amber-500/20'
+                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
                     }`}
                   >
-                    <Ticket className={`w-6 h-6 mx-auto mb-2 ${isUser ? 'text-amber-400' : 'text-white/50'}`} />
-                    <div className={`text-xs font-semibold uppercase tracking-wider ${isUser ? 'text-amber-400' : 'text-white/70'}`}>
+                    <Ticket className={`w-6 h-6 mx-auto mb-2 ${isUser ? 'text-amber-600' : 'text-slate-400'}`} />
+                    <div className={`text-xs font-semibold uppercase tracking-wider ${isUser ? 'text-amber-700' : 'text-slate-600'}`}>
                       The Audience
                     </div>
-                    <div className={`text-[10px] mt-1 ${isUser ? 'text-amber-300' : 'text-white/50'}`}>
+                    <div className={`text-[10px] mt-1 ${isUser ? 'text-amber-600' : 'text-slate-500'}`}>
                       I want to watch
                     </div>
                   </button>
@@ -227,15 +218,15 @@ const Auth = ({ onAuthSuccess }) => {
                     onClick={() => setRole('owner')}
                     className={`p-4 rounded-xl border-2 transition-all ${
                       !isUser
-                        ? 'border-indigo-400 bg-indigo-500/10 shadow-lg shadow-indigo-500/20'
-                        : 'border-white/10 bg-white/5 hover:border-white/20'
+                        ? 'border-violet-400 bg-violet-50 shadow-lg shadow-violet-500/20'
+                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
                     }`}
                   >
-                    <Clapperboard className={`w-6 h-6 mx-auto mb-2 ${!isUser ? 'text-indigo-400' : 'text-white/50'}`} />
-                    <div className={`text-xs font-semibold uppercase tracking-wider ${!isUser ? 'text-indigo-400' : 'text-white/70'}`}>
+                    <Clapperboard className={`w-6 h-6 mx-auto mb-2 ${!isUser ? 'text-violet-600' : 'text-slate-400'}`} />
+                    <div className={`text-xs font-semibold uppercase tracking-wider ${!isUser ? 'text-violet-700' : 'text-slate-600'}`}>
                       The Producer
                     </div>
-                    <div className={`text-[10px] mt-1 ${!isUser ? 'text-indigo-300' : 'text-white/50'}`}>
+                    <div className={`text-[10px] mt-1 ${!isUser ? 'text-violet-600' : 'text-slate-500'}`}>
                       I want to host
                     </div>
                   </button>
@@ -250,12 +241,12 @@ const Auth = ({ onAuthSuccess }) => {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="mb-6 p-4 bg-emerald-500/20 border border-emerald-500/50 rounded-xl text-center"
+                  className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center"
                 >
-                  <div className="text-emerald-400 font-semibold uppercase tracking-wider text-sm">
+                  <div className="text-emerald-700 font-semibold uppercase tracking-wider text-sm">
                     Studio Registered!
                   </div>
-                  <div className="text-emerald-300 text-xs mt-1">
+                  <div className="text-emerald-600 text-xs mt-1">
                     Please log in to access your console.
                   </div>
                 </motion.div>
@@ -272,7 +263,7 @@ const Auth = ({ onAuthSuccess }) => {
                   transition={{ delay: 0.1 }}
                 >
                   <div className="relative">
-                    <User className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-400' : 'text-indigo-400'}`} />
+                    <User className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-500' : 'text-violet-500'}`} />
                     <input
                       type="text"
                       name="name"
@@ -280,7 +271,7 @@ const Auth = ({ onAuthSuccess }) => {
                       onChange={handleChange}
                       placeholder="Full Name"
                       required={!isLogin}
-                      className={`w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none ${isUser ? 'focus:border-amber-400' : 'focus:border-indigo-400'} transition-colors`}
+                      className={`w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${isUser ? 'focus:ring-amber-500 focus:border-amber-500' : 'focus:ring-violet-500 focus:border-violet-500'} transition-colors`}
                     />
                   </div>
                 </motion.div>
@@ -293,7 +284,7 @@ const Auth = ({ onAuthSuccess }) => {
                 transition={{ delay: 0.2 }}
               >
                 <div className="relative">
-                  <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-400' : 'text-indigo-400'}`} />
+                  <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-500' : 'text-violet-500'}`} />
                   <input
                     type="email"
                     name="email"
@@ -301,7 +292,7 @@ const Auth = ({ onAuthSuccess }) => {
                     onChange={handleChange}
                     placeholder="Email Address"
                     required
-                    className={`w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none ${isUser ? 'focus:border-amber-400' : 'focus:border-indigo-400'} transition-colors`}
+                    className={`w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${isUser ? 'focus:ring-amber-500 focus:border-amber-500' : 'focus:ring-violet-500 focus:border-violet-500'} transition-colors`}
                   />
                 </div>
               </motion.div>
@@ -313,7 +304,7 @@ const Auth = ({ onAuthSuccess }) => {
                 transition={{ delay: 0.3 }}
               >
                 <div className="relative">
-                  <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-400' : 'text-indigo-400'}`} />
+                  <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-500' : 'text-violet-500'}`} />
                   <input
                     type="password"
                     name="password"
@@ -322,7 +313,7 @@ const Auth = ({ onAuthSuccess }) => {
                     placeholder="Password"
                     required
                     minLength={6}
-                    className={`w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none ${isUser ? 'focus:border-amber-400' : 'focus:border-indigo-400'} transition-colors`}
+                    className={`w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${isUser ? 'focus:ring-amber-500 focus:border-amber-500' : 'focus:ring-violet-500 focus:border-violet-500'} transition-colors`}
                   />
                 </div>
               </motion.div>
@@ -335,7 +326,7 @@ const Auth = ({ onAuthSuccess }) => {
                   transition={{ delay: 0.4 }}
                 >
                   <div className="relative">
-                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-violet-500" />
                     <input
                       type="text"
                       name="theatreName"
@@ -343,7 +334,7 @@ const Auth = ({ onAuthSuccess }) => {
                       onChange={handleChange}
                       placeholder="Theatre Name"
                       required={!isUser}
-                      className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-indigo-400 transition-colors"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
                     />
                   </div>
                 </motion.div>
@@ -358,7 +349,7 @@ const Auth = ({ onAuthSuccess }) => {
                 className={`w-full py-4 bg-gradient-to-r ${
                   isUser
                     ? 'from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/30'
-                    : 'from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 shadow-lg shadow-indigo-500/30'
+                    : 'from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-lg shadow-violet-500/30'
                 } text-white rounded-xl font-semibold uppercase tracking-wider transition-all transform hover:scale-[1.02]`}
               >
                 {isLogin 
@@ -384,15 +375,15 @@ const Auth = ({ onAuthSuccess }) => {
                   setFormData({ name: '', email: '', password: '', theatreName: '' });
                   if (isLogin) setRole('user');
                 }}
-                className="text-white/60 hover:text-white/90 text-sm transition-colors"
+                className="text-slate-600 hover:text-slate-800 text-sm transition-colors"
               >
                 {isLogin ? (
                   <>
-                    New to the show? <span className={`${isUser ? 'text-amber-400' : 'text-indigo-400'} font-semibold`}>Book a cameo</span>
+                    New to the show? <span className={`${isUser ? 'text-amber-600' : 'text-violet-600'} font-semibold`}>Book a cameo</span>
                   </>
                 ) : (
                   <>
-                    Already cast? <span className={`${isUser ? 'text-amber-400' : 'text-indigo-400'} font-semibold`}>Sign in</span>
+                    Already cast? <span className={`${isUser ? 'text-amber-600' : 'text-violet-600'} font-semibold`}>Sign in</span>
                   </>
                 )}
               </button>

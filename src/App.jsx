@@ -5,6 +5,10 @@ import Home from './components/Home';
 import BookingLayout from './components/Movie/BookingLayout';
 import EventBookingLayout from './components/Events/EventBookingLayout';
 import OwnerDashboard from './components/Owner/OwnerDashboard';
+import ProfileDropdown from './components/ProfileDropdown';
+import Settings from './components/Settings';
+import MyBookings from './components/MyBookings';
+import Wishlist from './components/Wishlist';
 
 function App() {
   // Authentication state
@@ -12,7 +16,7 @@ function App() {
   const [user, setUser] = useState(null);
 
   // Main state management
-  const [view, setView] = useState('HOME'); // 'HOME' | 'BOOKING'
+  const [view, setView] = useState('HOME'); // 'HOME' | 'BOOKING' | 'SETTINGS' | 'BOOKINGS' | 'WISHLIST' | 'OWNER_DASHBOARD'
   const [bookingType, setBookingType] = useState('MOVIE'); // 'MOVIE' | 'EVENT'
   const [bookingStep, setBookingStep] = useState(1); // 1-4
   
@@ -47,9 +51,14 @@ function App() {
     setBookingStep(1);
   };
 
-  // Handler: Back to Home
+  // Handler: Back to Home (role-aware)
   const handleBack = () => {
-    setView('HOME');
+    // Redirect based on user role
+    if (user?.role === 'owner') {
+      setView('OWNER_DASHBOARD');
+    } else {
+      setView('HOME');
+    }
     setSelectedMovie(null);
     setSelectedEvent(null);
     setSelectedShow(null);
@@ -58,6 +67,15 @@ function App() {
     setSelectedZones({});
     setTotalPrice(0);
     setBookingStep(1);
+  };
+
+  // Handler: Navigate to home based on role
+  const handleNavigateHome = () => {
+    if (user?.role === 'owner') {
+      setView('OWNER_DASHBOARD');
+    } else {
+      setView('HOME');
+    }
   };
 
   // Movie Handlers
@@ -107,9 +125,39 @@ function App() {
 
   // Handler: Logout
   const handleLogout = () => {
-    handleBack();
+    // Reset all state
+    setView('HOME');
+    setSelectedMovie(null);
+    setSelectedEvent(null);
+    setSelectedShow(null);
+    setSelectedDate(null);
+    setSelectedSeats([]);
+    setSelectedZones({});
+    setTotalPrice(0);
+    setBookingStep(1);
     setIsAuthenticated(false);
     setUser(null);
+  };
+
+  // Handler: Profile Dropdown Navigation
+  const handleProfileNavigation = (action) => {
+    if (action === 'settings') {
+      setView('SETTINGS');
+    } else if (action === 'bookings') {
+      setView('BOOKINGS');
+    } else if (action === 'wishlist') {
+      setView('WISHLIST');
+    } else if (action === 'home') {
+      handleNavigateHome();
+    }
+  };
+
+  // Handler: Save Settings
+  const handleSaveSettings = (formData) => {
+    setUser({
+      ...user,
+      ...formData,
+    });
   };
 
   // Prepare booking details object
@@ -134,24 +182,37 @@ function App() {
 
   return (
     <div className="min-h-screen bg-cinema-light text-white">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 backdrop-blur-lg bg-black/30 sticky top-0 z-20">
-        <div>
-          <p className="text-xl font-semibold tracking-wide uppercase">ITS SHOW TIME</p>
-          <p className="text-sm text-white/70">
-            Welcome back, {user?.name || (user?.role === 'owner' ? 'Producer' : 'macha')}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right text-xs uppercase tracking-widest text-white/60">
-            <div>{user?.role === 'owner' ? 'Director' : 'Movie Lover'}</div>
-            <div className="text-[10px] text-white/50">{user?.email}</div>
+      {/* Modern Navbar with Gradient */}
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-slate-50 via-white to-slate-50 border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <button
+              onClick={handleNavigateHome}
+              className="flex items-center gap-2 sm:gap-3 group"
+            >
+              <div className="relative">
+                <div className="w-11 h-11 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                  <span className="text-2xl">🎬</span>
+                </div>
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent tracking-tight">
+                  ITS SHOW TIME
+                </h1>
+                <p className="text-xs text-slate-500 font-medium">
+                  Your Entertainment Hub
+                </p>
+              </div>
+            </button>
+
+            {/* Profile Dropdown */}
+            <ProfileDropdown
+              user={user}
+              onLogout={handleLogout}
+              onNavigate={handleProfileNavigation}
+            />
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 text-xs uppercase tracking-widest bg-white/10 border border-white/30 rounded-full hover:bg-white/20 transition-colors"
-          >
-            Logout
-          </button>
         </div>
       </header>
 
@@ -160,7 +221,27 @@ function App() {
           <OwnerDashboard
             key="owner-dashboard"
             user={user}
-            onLogout={handleLogout}
+          />
+        ) : view === 'SETTINGS' ? (
+          <Settings
+            key="settings"
+            user={user}
+            onBack={handleNavigateHome}
+            onSave={handleSaveSettings}
+          />
+        ) : view === 'BOOKINGS' ? (
+          <MyBookings
+            key="bookings"
+            user={user}
+            onBack={handleNavigateHome}
+          />
+        ) : view === 'WISHLIST' ? (
+          <Wishlist
+            key="wishlist"
+            user={user}
+            onBack={handleNavigateHome}
+            onMovieSelect={handleMovieSelect}
+            onEventSelect={handleEventSelect}
           />
         ) : view === 'HOME' ? (
           <Home

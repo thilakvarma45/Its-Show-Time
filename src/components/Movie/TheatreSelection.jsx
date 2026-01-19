@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { MapPin, Calendar } from 'lucide-react';
+import { MapPin, Calendar, Search } from 'lucide-react';
 import { THEATRES, DATES } from '../../data/mockData';
 
 const TheatreSelection = ({ onTimeSelect }) => {
   const [selectedDate, setSelectedDate] = useState(DATES[0].id);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleTimeClick = (theatre, time) => {
     onTimeSelect({
@@ -15,6 +16,12 @@ const TheatreSelection = ({ onTimeSelect }) => {
       date: DATES.find(d => d.id === selectedDate)
     });
   };
+
+  // Filter theatres by search query
+  const filteredTheatres = THEATRES.filter(theatre =>
+    theatre.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    theatre.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -48,14 +55,44 @@ const TheatreSelection = ({ onTimeSelect }) => {
         </div>
       </motion.div>
 
+      {/* Search Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search theatres by name or location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+          />
+        </div>
+      </motion.div>
+
       {/* Theatre List */}
       <div className="space-y-4">
-        <h3 className="text-slate-900 font-semibold uppercase tracking-wider text-sm flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-blue-500" />
-          Select Theatre & Show Time
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-slate-900 font-semibold uppercase tracking-wider text-sm flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-blue-500" />
+            Select Theatre & Show Time
+          </h3>
+          <span className="text-sm text-slate-500">
+            {filteredTheatres.length} {filteredTheatres.length === 1 ? 'theatre' : 'theatres'}
+          </span>
+        </div>
 
-        {THEATRES.map((theatre, index) => (
+        {filteredTheatres.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
+            <div className="text-5xl mb-3">🎭</div>
+            <h4 className="text-lg font-semibold text-slate-800 mb-1">No theatres found</h4>
+            <p className="text-slate-600 text-sm">Try adjusting your search</p>
+          </div>
+        ) : (
+          filteredTheatres.map((theatre, index) => (
           <motion.div
             key={theatre.id}
             initial={{ opacity: 0, y: 20 }}
@@ -92,7 +129,8 @@ const TheatreSelection = ({ onTimeSelect }) => {
               <span className="text-slate-900 font-semibold">${theatre.price}</span>
             </div>
           </motion.div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
