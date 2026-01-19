@@ -1,89 +1,158 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Building2, Calendar, LogOut } from 'lucide-react';
-import DashboardStats from './DashboardStats';
-import RevenueChart from './RevenueChart';
+import { Film, Building2, Calendar, Menu, X } from 'lucide-react';
+import MovieListings from './MovieListings';
+import BookingDetails from './BookingDetails';
 import VenueManagement from './VenueManagement';
 import SmartScheduler from './SmartScheduler';
 import AccessDenied from './AccessDenied';
 
-const OwnerDashboard = ({ user, onLogout }) => {
-  const [activeView, setActiveView] = useState('DASHBOARD'); // 'DASHBOARD' | 'VENUES' | 'SCHEDULER'
+const OwnerDashboard = ({ user }) => {
+  const [activeView, setActiveView] = useState('LISTINGS'); // 'LISTINGS' | 'VENUES' | 'SCHEDULER'
+  const [selectedShow, setSelectedShow] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Check if user is owner
   if (!user || user.role !== 'owner') {
-    return <AccessDenied onLogout={onLogout} />;
+    return <AccessDenied />;
   }
 
+  const handleSelectShow = (show) => {
+    setSelectedShow(show);
+  };
+
+  const handleBackToListings = () => {
+    setSelectedShow(null);
+  };
+
   const navigationItems = [
-    { id: 'DASHBOARD', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'LISTINGS', label: 'Movie Listings', icon: Film },
     { id: 'VENUES', label: 'Venues', icon: Building2 },
     { id: 'SCHEDULER', label: 'Scheduler', icon: Calendar },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-30">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-wide uppercase">CineVerse Control Room</h1>
-            <p className="text-sm text-slate-400 mt-1">
-              {user?.name || 'Nolan Enterprises'} • Director Console
-            </p>
-          </div>
-          <button
-            onClick={onLogout}
-            className="px-4 py-2 text-sm uppercase tracking-wider bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="flex flex-col lg:flex-row">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="lg:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-gradient-to-r from-violet-500 to-purple-500 text-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all"
+        >
+          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
 
-      <div className="flex">
-        {/* Sidebar Navigation */}
-        <aside className="w-64 bg-slate-900 border-r border-slate-800 min-h-[calc(100vh-80px)]">
-          <nav className="p-4 space-y-2">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeView === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveView(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    isActive
-                      ? 'bg-indigo-500/20 border border-indigo-500/50 text-indigo-400'
-                      : 'bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:bg-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
+        {/* Sidebar Navigation - Desktop */}
+        <aside className="hidden lg:block w-64 bg-white border-r border-slate-200 min-h-screen sticky top-16">
+          <div className="p-6">
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+              Producer Panel
+            </h2>
+            <nav className="space-y-2">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.id && !selectedShow;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveView(item.id);
+                      setSelectedShow(null);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                      isActive
+                        ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-semibold">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          <AnimatePresence mode="wait">
-            {activeView === 'DASHBOARD' && (
+        {/* Mobile Sidebar */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <>
+              {/* Backdrop */}
               <motion.div
-                key="dashboard"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden fixed inset-0 bg-black/50 z-40"
+              />
+              
+              {/* Sidebar */}
+              <motion.aside
+                initial={{ x: -280 }}
+                animate={{ x: 0 }}
+                exit={{ x: -280 }}
+                transition={{ type: 'spring', damping: 25 }}
+                className="lg:hidden fixed left-0 top-16 bottom-0 w-72 bg-white border-r border-slate-200 z-40 overflow-y-auto"
+              >
+                <div className="p-6">
+                  <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+                    Producer Panel
+                  </h2>
+                  <nav className="space-y-2">
+                    {navigationItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeView === item.id && !selectedShow;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            setActiveView(item.id);
+                            setSelectedShow(null);
+                            setSidebarOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                            isActive
+                              ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30'
+                              : 'text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <Icon className="w-5 h-5" />
+                          <span className="font-semibold">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+              </motion.aside>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Main Content */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <AnimatePresence mode="wait">
+            {selectedShow ? (
+              <motion.div
+                key="booking-details"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <BookingDetails item={selectedShow} onBack={handleBackToListings} />
+              </motion.div>
+            ) : activeView === 'LISTINGS' ? (
+              <motion.div
+                key="listings"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-6"
               >
-                <DashboardStats />
-                <RevenueChart />
+                <MovieListings onSelectShow={handleSelectShow} />
               </motion.div>
-            )}
-            {activeView === 'VENUES' && (
+            ) : activeView === 'VENUES' ? (
               <motion.div
                 key="venues"
                 initial={{ opacity: 0, y: 20 }}
@@ -93,8 +162,7 @@ const OwnerDashboard = ({ user, onLogout }) => {
               >
                 <VenueManagement />
               </motion.div>
-            )}
-            {activeView === 'SCHEDULER' && (
+            ) : (
               <motion.div
                 key="scheduler"
                 initial={{ opacity: 0, y: 20 }}
