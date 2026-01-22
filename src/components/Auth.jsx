@@ -176,7 +176,7 @@ const Auth = ({ onAuthSuccess }) => {
                   exit={{ opacity: 0, y: -10 }}
                   className={`text-xl md:text-2xl font-semibold ${isUser ? 'text-amber-600' : 'text-violet-600'} uppercase tracking-wider`}
                 >
-                  {isLogin ? 'Back to the Movies' : 'Premiere Your Account'}
+                  {isLogin ? 'Back to the Movies' : 'Schedule your Show'}
                 </motion.h2>
               </AnimatePresence>
             </div>
