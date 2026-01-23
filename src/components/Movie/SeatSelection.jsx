@@ -44,7 +44,7 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
           <span className="text-slate-600">Available</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-blue-600 rounded-t-md rounded-b-sm relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:rounded-t-md before:bg-blue-500" />
+          <div className="w-6 h-6 bg-green-600 rounded-t-md rounded-b-sm relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:rounded-t-md before:bg-green-500" />
           <span className="text-slate-600">Selected</span>
         </div>
         <div className="flex items-center gap-2">
@@ -101,7 +101,7 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
                         ${isTaken 
                           ? 'bg-red-900/50 text-red-500 border border-red-500/30 cursor-not-allowed opacity-60' 
                           : isSelected
-                            ? 'bg-blue-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.6)] scale-110 z-10'
+                            ? 'bg-green-600 text-white shadow-[0_0_12px_rgba(34,197,94,0.6)] scale-110 z-10'
                             : 'bg-slate-300 text-slate-600 border-2 border-slate-400 hover:border-blue-500 hover:scale-105'
                         }
                         rounded-t-md rounded-b-sm
@@ -111,7 +111,7 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
                         ${isTaken 
                           ? 'before:bg-red-600/50' 
                           : isSelected
-                            ? 'before:bg-blue-500'
+                            ? 'before:bg-green-500'
                             : 'before:bg-slate-400'
                         }
                       `}

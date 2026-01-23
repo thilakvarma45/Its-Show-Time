@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Heart, Star, Calendar, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
 const Wishlist = ({ user, onBack, onMovieSelect, onEventSelect }) => {
-  // Mock wishlist data
-  const wishlistItems = [
+  // Mock wishlist data - now using state
+  const [wishlistItems, setWishlistItems] = useState([
     {
       id: 1,
       type: 'movie',
@@ -21,11 +22,10 @@ const Wishlist = ({ user, onBack, onMovieSelect, onEventSelect }) => {
       venue: 'Blue Note Jazz Club',
       date: 'Mar 25, 2024',
     },
-  ];
+  ]);
 
   const handleRemove = (id) => {
-    // Implementation for removing from wishlist
-    console.log('Remove item:', id);
+    setWishlistItems(prevItems => prevItems.filter(item => item.id !== id));
   };
 
   const handleItemClick = (item) => {
