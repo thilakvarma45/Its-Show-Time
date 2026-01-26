@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import MovieSidebar from './MovieSidebar';
 import BookingWizard from './BookingWizard';
-import PaymentForm from '../PaymentForm';
-import Ticket from '../Ticket';
+import PaymentForm from '../Users/PaymentForm';
+import Ticket from '../Users/Ticket';
 
 const BookingLayout = ({ 
   selectedMovie, 

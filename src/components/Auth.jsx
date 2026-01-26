@@ -2,8 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { Ticket, Clapperboard, Mail, Lock, User, Building2, Sparkles } from 'lucide-react';
 
-const Auth = ({ onAuthSuccess }) => {
-  const [isLogin, setIsLogin] = useState(true);
+const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
+  const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [role, setRole] = useState('user'); // 'user' or 'owner'
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({
