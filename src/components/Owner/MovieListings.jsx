@@ -1,14 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Calendar, ChevronRight, Search, SlidersHorizontal } from 'lucide-react';
-import { MOVIES, EVENTS } from '../../data/mockData';
+import { Film, Calendar, ChevronRight, Search, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { EVENTS } from '../../data/mockData';
+import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
 
 const MovieListings = ({ onSelectShow }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'movies', 'events'
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch movies from TMDB on mount and when search query changes
+  useEffect(() => {
+    const loadMovies = async () => {
+      if (filterType === 'events') {
+        setMovies([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        let result;
+        if (searchQuery.trim()) {
+          // Search movies if there's a query
+          result = await searchMovies(searchQuery);
+        } else {
+          // Load popular movies by default
+          result = await fetchPopularMovies(1);
+        }
+        setMovies(result.movies);
+      } catch (err) {
+        console.error('Error loading movies:', err);
+        setError('Failed to load movies. Please try again later.');
+        setMovies([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Debounce search to avoid too many API calls
+    const timeoutId = setTimeout(() => {
+      loadMovies();
+    }, searchQuery.trim() ? 500 : 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, filterType]);
 
   const allListings = [
-    ...MOVIES.map(m => ({ ...m, type: 'movie' })),
+    ...movies.map(m => ({ ...m, type: 'movie' })),
     ...EVENTS.map(e => ({ ...e, type: 'event' }))
   ];
 
@@ -18,8 +60,9 @@ const MovieListings = ({ onSelectShow }) => {
     if (filterType === 'movies' && item.type !== 'movie') return false;
     if (filterType === 'events' && item.type !== 'event') return false;
     
-    // Filter by search query
-    if (searchQuery) {
+    // If searching and filter is movies, TMDB search already handled it
+    // But we still filter events locally if needed
+    if (searchQuery && item.type === 'event') {
       return item.title.toLowerCase().includes(searchQuery.toLowerCase());
     }
     return true;
@@ -72,7 +115,19 @@ const MovieListings = ({ onSelectShow }) => {
         </div>
       </div>
 
-      {filteredListings.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <Loader2 className="w-12 h-12 animate-spin text-violet-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Loading movies...</h3>
+          <p className="text-slate-600">Fetching the latest from TMDB</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Error loading movies</h3>
+          <p className="text-slate-600">{error}</p>
+        </div>
+      ) : filteredListings.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
           <div className="text-6xl mb-4">🎬</div>
           <h3 className="text-xl font-bold text-slate-800 mb-2">No listings found</h3>

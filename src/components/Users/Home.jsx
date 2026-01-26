@@ -1,16 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Calendar, Search, SlidersHorizontal } from 'lucide-react';
-import { MOVIES, EVENTS } from '../data/mockData';
+import { Star, Calendar, Search, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { EVENTS } from '../../data/mockData';
+import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
 
 const Home = ({ onMovieSelect, onEventSelect, user }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name'); // 'name', 'rating', 'latest'
   const [filterType, setFilterType] = useState('all'); // 'all', 'movies', 'events'
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch movies from TMDB on mount and when search query changes
+  useEffect(() => {
+    const loadMovies = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        let result;
+        if (searchQuery.trim() && filterType !== 'events') {
+          // Search movies if there's a query
+          result = await searchMovies(searchQuery);
+        } else if (filterType !== 'events') {
+          // Load popular movies by default
+          result = await fetchPopularMovies(1);
+        } else {
+          // If filtering by events only, don't fetch movies
+          setMovies([]);
+          setLoading(false);
+          return;
+        }
+        setMovies(result.movies);
+      } catch (err) {
+        console.error('Error loading movies:', err);
+        setError('Failed to load movies. Please try again later.');
+        setMovies([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Debounce search to avoid too many API calls
+    const timeoutId = setTimeout(() => {
+      loadMovies();
+    }, searchQuery.trim() ? 500 : 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, filterType]);
 
   // Combine and filter items
   const allItems = [
-    ...MOVIES.map(m => ({ ...m, type: 'movie' })),
+    ...movies.map(m => ({ ...m, type: 'movie' })),
     ...EVENTS.map(e => ({ ...e, type: 'event' }))
   ];
 
@@ -20,8 +61,9 @@ const Home = ({ onMovieSelect, onEventSelect, user }) => {
       if (filterType === 'movies' && item.type !== 'movie') return false;
       if (filterType === 'events' && item.type !== 'event') return false;
       
-      // Filter by search query
-      if (searchQuery) {
+      // If searching and filter is movies, TMDB search already handled it
+      // But we still filter events locally if needed
+      if (searchQuery && item.type === 'event') {
         return item.title.toLowerCase().includes(searchQuery.toLowerCase());
       }
       return true;
@@ -31,6 +73,8 @@ const Home = ({ onMovieSelect, onEventSelect, user }) => {
         return a.title.localeCompare(b.title);
       } else if (sortBy === 'rating' && a.rating && b.rating) {
         return b.rating - a.rating;
+      } else if (sortBy === 'latest' && a.releaseDate && b.releaseDate) {
+        return new Date(b.releaseDate) - new Date(a.releaseDate);
       }
       return 0;
     });
@@ -118,7 +162,27 @@ const Home = ({ onMovieSelect, onEventSelect, user }) => {
       </motion.div>
 
       {/* Mixed Grid - Movies & Events */}
-      {filteredItems.length === 0 ? (
+      {loading ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-16"
+        >
+          <Loader2 className="w-12 h-12 animate-spin text-violet-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Loading movies...</h3>
+          <p className="text-slate-600">Fetching the latest from TMDB</p>
+        </motion.div>
+      ) : error ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-16"
+        >
+          <div className="text-6xl mb-4">⚠️</div>
+          <h3 className="text-2xl font-bold text-slate-800 mb-2">Error loading movies</h3>
+          <p className="text-slate-600">{error}</p>
+        </motion.div>
+      ) : filteredItems.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

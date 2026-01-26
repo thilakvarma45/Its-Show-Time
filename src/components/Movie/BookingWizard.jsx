@@ -2,8 +2,8 @@ import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import TheatreSelection from './TheatreSelection';
 import SeatSelection from './SeatSelection';
-import PaymentForm from '../PaymentForm';
-import Ticket from '../Ticket';
+import PaymentForm from '../Users/PaymentForm';
+import Ticket from '../Users/Ticket';
 
 const STEPS = [
   { id: 1, label: 'THEATRES' },

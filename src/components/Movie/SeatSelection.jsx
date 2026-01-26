@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { Armchair } from 'lucide-react';
 import { generateSeats, SEAT_ROWS } from '../../data/mockData';
 
 const SeatSelection = ({ selectedShow, onContinue }) => {
@@ -24,37 +23,49 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
   const totalPrice = selectedSeats.length * selectedShow.price;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       {/* Screen */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative"
       >
-        <div className="mx-auto w-4/5 h-2 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full mb-2" />
-        <div className="text-center text-slate-600 text-sm uppercase tracking-widest">
+        <div className="mx-auto w-3/4 h-1 bg-slate-300 rounded-full mb-2" />
+        <div className="text-center text-slate-500 text-sm font-medium uppercase tracking-wide">
           Screen
         </div>
       </motion.div>
 
       {/* Seat Legend */}
-      <div className="flex justify-center gap-6 text-sm">
+      <div className="flex justify-center gap-8 text-sm">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-slate-300 rounded-t-md rounded-b-sm border-2 border-slate-400 relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:rounded-t-md before:bg-slate-400" />
+          <div className="w-10 h-10 bg-slate-200 border border-slate-300 rounded flex items-center justify-center text-slate-600 text-xs font-medium">
+            A1
+          </div>
           <span className="text-slate-600">Available</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-blue-600 rounded-t-md rounded-b-sm relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:rounded-t-md before:bg-blue-500" />
+          <div className="w-10 h-10 bg-blue-500 border border-blue-600 rounded flex items-center justify-center text-white text-xs font-medium">
+            A2
+          </div>
           <span className="text-slate-600">Selected</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-red-900/50 rounded-t-md rounded-b-sm border-2 border-red-500/30 opacity-60 relative before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:rounded-t-md before:bg-red-600/50" />
+          <div className="w-10 h-10 bg-slate-400 border border-slate-500 rounded flex items-center justify-center text-slate-300 text-xs font-medium opacity-60">
+            A3
+          </div>
           <span className="text-slate-600">Taken</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-amber-200 border border-amber-400 rounded flex items-center justify-center text-amber-700 text-xs font-medium">
+            L1
+          </div>
+          <span className="text-slate-600">VIP</span>
         </div>
       </div>
 
       {/* Seat Map */}
-      <div className="space-y-3 max-w-4xl mx-auto">
+      <div className="space-y-2 max-w-6xl mx-auto">
         {SEAT_ROWS.map((row, rowIndex) => {
           const rowSeats = getSeatsByRow(row.id);
           const isVIP = row.type === 'vip';
@@ -64,28 +75,26 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
               key={row.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: rowIndex * 0.05 }}
-              className="flex items-center gap-4"
+              transition={{ delay: rowIndex * 0.03 }}
+              className="flex items-center gap-3"
             >
               {/* Row Label */}
-              <div className={`w-12 text-center font-bold ${isVIP ? 'text-yellow-500' : 'text-slate-600'}`}>
+              <div className={`w-10 text-center font-semibold text-sm ${
+                isVIP ? 'text-amber-600' : 'text-slate-600'
+              }`}>
                 {row.id}
               </div>
 
               {/* Seats Grid */}
-              <div className={`flex-1 grid gap-1.5 justify-center ${
-                isVIP 
-                  ? 'grid-cols-8' 
-                  : 'grid-cols-[repeat(4,auto),1.5rem,repeat(4,auto)]'
-              }`}>
+              <div className="flex-1 flex items-center gap-1.5 justify-center flex-wrap">
                 {rowSeats.map((seat, index) => {
                   const isSelected = selectedSeats.includes(seat.id);
                   const isTaken = seat.taken;
                   
-                  // Create aisle gap for standard seats (after 4th seat)
-                  if (!isVIP && index === 4) {
+                  // Create aisle gap after 7th seat (middle aisle)
+                  if (index === 7) {
                     return (
-                      <div key={`aisle-${row.id}`} className="col-span-1" />
+                      <div key={`aisle-${row.id}`} className="w-6" />
                     );
                   }
 
@@ -95,27 +104,22 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
                       onClick={() => toggleSeat(seat.id, isTaken)}
                       disabled={isTaken}
                       className={`
-                        relative w-8 h-8 ${isVIP ? 'w-10 h-10' : ''}
-                        ${isVIP ? 'text-xs' : 'text-[10px]'}
-                        font-semibold transition-all duration-200
-                        ${isTaken 
-                          ? 'bg-red-900/50 text-red-500 border border-red-500/30 cursor-not-allowed opacity-60' 
-                          : isSelected
-                            ? 'bg-blue-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.6)] scale-110 z-10'
-                            : 'bg-slate-300 text-slate-600 border-2 border-slate-400 hover:border-blue-500 hover:scale-105'
-                        }
-                        rounded-t-md rounded-b-sm
+                        w-10 h-10
+                        text-xs font-medium
+                        transition-all duration-200
+                        rounded
+                        border-2
                         flex items-center justify-center
-                        before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1
-                        before:rounded-t-md
                         ${isTaken 
-                          ? 'before:bg-red-600/50' 
+                          ? 'bg-slate-400 border-slate-500 text-slate-300 cursor-not-allowed opacity-60' 
                           : isSelected
-                            ? 'before:bg-blue-500'
-                            : 'before:bg-slate-400'
+                            ? 'bg-blue-500 border-blue-600 text-white shadow-md scale-105'
+                            : isVIP
+                              ? 'bg-amber-200 border-amber-400 text-amber-700 hover:bg-amber-300 hover:scale-105'
+                              : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300 hover:border-blue-400 hover:scale-105'
                         }
                       `}
-                      title={`Seat ${seat.id}${seat.number}`}
+                      title={`Seat ${seat.id}`}
                     >
                       {seat.number}
                     </button>
@@ -128,10 +132,9 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
       </div>
 
       {/* VIP Label */}
-      <div className="text-center">
-        <span className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400/10 border border-yellow-400/30 rounded-full text-yellow-600 text-sm">
-          <Armchair className="w-4 h-4" />
-          Row I - VIP Recliner Seats
+      <div className="text-center pt-4">
+        <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm font-medium">
+          Rows L & M - VIP Recliner Seats
         </span>
       </div>
 
@@ -140,21 +143,21 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky bottom-0 bg-white border-t-2 border-blue-600 p-6 rounded-t-lg shadow-lg"
+          className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-200 p-6 shadow-lg z-50"
         >
-          <div className="flex items-center justify-between max-w-4xl mx-auto">
+          <div className="flex items-center justify-between max-w-6xl mx-auto">
             <div>
-              <div className="text-slate-600 text-sm mb-1">Selected Seats</div>
+              <div className="text-slate-500 text-sm mb-1">Selected Seats</div>
               <div className="text-slate-900 text-2xl font-bold">
-                {selectedSeats.length} {selectedSeats.length === 1 ? 'Seat' : 'Seats'} • ${totalPrice}
+                {selectedSeats.length} {selectedSeats.length === 1 ? 'Seat' : 'Seats'} • ₹{totalPrice}
               </div>
-              <div className="text-slate-600 text-sm mt-1">
+              <div className="text-slate-600 text-sm mt-1 font-medium">
                 {selectedSeats.sort().join(', ')}
               </div>
             </div>
             <button
               onClick={() => onContinue(selectedSeats, totalPrice)}
-              className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold uppercase tracking-wider transition-colors"
+              className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors shadow-md"
             >
               Continue to Payment
             </button>
@@ -166,4 +169,3 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
 };
 
 export default SeatSelection;
-

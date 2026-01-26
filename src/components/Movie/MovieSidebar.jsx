@@ -6,28 +6,31 @@ const MovieSidebar = ({ movie, onBack }) => {
     <motion.div
       initial={{ opacity: 0, x: -50 }}
       animate={{ opacity: 1, x: 0 }}
-      className="w-full h-full bg-white p-8 flex flex-col"
+      className="w-full h-full bg-white p-6 flex flex-col overflow-y-auto"
     >
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6 transition-colors"
+        className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
       >
         <ArrowLeft className="w-5 h-5" />
         <span className="text-sm">Back to Movies</span>
       </button>
+
+      {/* Spacer to push content down below booking steps bar */}
+      <div className="h-32"></div>
 
       {/* Poster with shared element transition */}
       <motion.img
         layoutId={`poster-${movie.id}`}
         src={movie.poster}
         alt={movie.title}
-        className="w-full rounded-lg shadow-2xl mb-6"
+        className="w-full max-w-[240px] mx-auto rounded-lg shadow-xl mb-5"
       />
 
       {/* Movie Details */}
       <div className="flex-1">
-        <h2 className="text-3xl font-bold text-slate-900 mb-4 uppercase tracking-wide">
+        <h2 className="text-2xl font-bold text-slate-900 mb-4 uppercase tracking-wide">
           {movie.title}
         </h2>
 
@@ -36,7 +39,7 @@ const MovieSidebar = ({ movie, onBack }) => {
           {[...Array(5)].map((_, i) => (
             <Star
               key={i}
-              className={`w-5 h-5 ${
+              className={`w-4 h-4 ${
                 i < Math.floor(movie.rating)
                   ? 'text-yellow-500 fill-yellow-500'
                   : 'text-slate-300'

@@ -8,7 +8,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Jost', 'sans-serif'],
+        sans: ['Sofia Sans', 'Jost', 'sans-serif'],
+        jost: ['Jost', 'sans-serif'],
+        sofia: ['Sofia Sans', 'sans-serif'],
       },
       colors: {
         'cinema-dark': '#0B0F19',

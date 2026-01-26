@@ -100,16 +100,27 @@ export const SEAT_ROWS = [
   { id: 'F', type: 'standard', label: 'F' },
   { id: 'G', type: 'standard', label: 'G' },
   { id: 'H', type: 'standard', label: 'H' },
-  { id: 'I', type: 'vip', label: 'I - VIP RECLINER' },
+  { id: 'I', type: 'standard', label: 'I' },
+  { id: 'J', type: 'standard', label: 'J' },
+  { id: 'K', type: 'standard', label: 'K' },
+  { id: 'L', type: 'vip', label: 'L - VIP' },
+  { id: 'M', type: 'vip', label: 'M - VIP' },
 ];
 
 // Generate seat map with some taken seats
 export const generateSeats = () => {
   const seats = [];
-  const takenSeats = ['A2', 'A3', 'B4', 'C1', 'C5', 'D3', 'D6', 'E2', 'E7', 'F4', 'F5', 'G1', 'H6', 'I2', 'I5'];
+  // More realistic taken seats across more rows
+  const takenSeats = [
+    'A3', 'A7', 'A12', 'B2', 'B5', 'B9', 'C1', 'C6', 'C11', 'C14',
+    'D4', 'D8', 'D13', 'E2', 'E6', 'E10', 'F3', 'F7', 'F12',
+    'G1', 'G5', 'G9', 'G14', 'H4', 'H8', 'H13', 'I2', 'I6', 'I11',
+    'J3', 'J7', 'J12', 'K1', 'K5', 'K10', 'K14', 'L2', 'L6', 'L9',
+    'M3', 'M7', 'M12'
+  ];
   
   SEAT_ROWS.forEach(row => {
-    const seatsInRow = row.type === 'vip' ? 8 : 8; // 8 seats per row
+    const seatsInRow = row.type === 'vip' ? 12 : 14; // More seats per row
     for (let i = 1; i <= seatsInRow; i++) {
       const seatId = `${row.id}${i}`;
       seats.push({

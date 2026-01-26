@@ -2,8 +2,8 @@ import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import VenueSelection from './VenueSelection';
 import ZoneSelection from './ZoneSelection';
-import PaymentForm from '../PaymentForm';
-import Ticket from '../Ticket';
+import PaymentForm from '../Users/PaymentForm';
+import Ticket from '../Users/Ticket';
 
 const STEPS = [
   { id: 1, label: 'VENUE' },
