@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { MapPin, Calendar, Search } from 'lucide-react';
 import { THEATRES, DATES } from '../../data/mockData';
 
-const TheatreSelection = ({ onTimeSelect }) => {
-  const [selectedDate, setSelectedDate] = useState(DATES[0].id);
+const TheatreSelection = ({ onTimeSelect, selectedShow }) => {
+  const [selectedDate, setSelectedDate] = useState(selectedShow?.date?.id || DATES[0].id);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleTimeClick = (theatre, time) => {
@@ -42,11 +42,10 @@ const TheatreSelection = ({ onTimeSelect }) => {
             <button
               key={date.id}
               onClick={() => setSelectedDate(date.id)}
-              className={`flex-shrink-0 px-6 py-3 rounded-lg border-2 transition-all ${
-                selectedDate === date.id
+              className={`flex-shrink-0 px-6 py-3 rounded-lg border-2 transition-all ${selectedDate === date.id
                   ? 'bg-blue-600 border-blue-600 text-white'
                   : 'bg-transparent border-slate-300 text-slate-600 hover:border-blue-500'
-              }`}
+                }`}
             >
               <div className="text-sm font-semibold">{date.day}</div>
               <div className="text-2xl font-bold">{date.date}</div>
@@ -93,42 +92,50 @@ const TheatreSelection = ({ onTimeSelect }) => {
           </div>
         ) : (
           filteredTheatres.map((theatre, index) => (
-          <motion.div
-            key={theatre.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-lg p-6 border border-slate-200 hover:border-blue-500 transition-colors shadow-md"
-          >
-            {/* Theatre Info */}
-            <div className="mb-4">
-              <h4 className="text-slate-900 text-xl font-bold uppercase tracking-wide mb-1">
-                {theatre.name}
-              </h4>
-              <p className="text-slate-600 text-sm">{theatre.location}</p>
-            </div>
+            <motion.div
+              key={theatre.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-white rounded-lg p-6 border border-slate-200 hover:border-blue-500 transition-colors shadow-md"
+            >
+              {/* Theatre Info */}
+              <div className="mb-4">
+                <h4 className="text-slate-900 text-xl font-bold uppercase tracking-wide mb-1">
+                  {theatre.name}
+                </h4>
+                <p className="text-slate-600 text-sm">{theatre.location}</p>
+              </div>
 
-            {/* Time Slots Grid */}
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-              {theatre.times.map((time) => (
-                <button
-                  key={time}
-                  onClick={() => handleTimeClick(theatre, time)}
-                  className="px-4 py-3 rounded-lg border-2 border-slate-300 text-slate-700 
-                           hover:border-blue-600 hover:bg-blue-600 hover:text-white 
-                           transition-all font-medium text-sm"
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
+              {/* Time Slots Grid */}
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                {theatre.times.map((time) => {
+                  const isSelected =
+                    selectedShow?.theatreId === theatre.id &&
+                    selectedShow?.time === time &&
+                    selectedShow?.date?.id === selectedDate;
 
-            {/* Price Info */}
-            <div className="mt-4 pt-4 border-t border-slate-200">
-              <span className="text-slate-600 text-sm">Price: </span>
-              <span className="text-slate-900 font-semibold">${theatre.price}</span>
-            </div>
-          </motion.div>
+                  return (
+                    <button
+                      key={time}
+                      onClick={() => handleTimeClick(theatre, time)}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm ${isSelected
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] ring-2 ring-blue-400 ring-offset-2'
+                          : 'border-slate-300 text-slate-700 hover:border-blue-600 hover:bg-blue-600 hover:text-white'
+                        }`}
+                    >
+                      {time}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Price Info */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <span className="text-slate-600 text-sm">Price: </span>
+                <span className="text-slate-900 font-semibold">${theatre.price}</span>
+              </div>
+            </motion.div>
           ))
         )}
       </div>

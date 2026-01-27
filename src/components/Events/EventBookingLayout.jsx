@@ -10,7 +10,8 @@ const EventBookingLayout = ({
   onDateSelect,
   onZonesSelect,
   onPaymentComplete,
-  onNewBooking
+  onNewBooking,
+  onStepChange
 }) => {
   return (
     <motion.div
@@ -34,6 +35,7 @@ const EventBookingLayout = ({
           onZonesSelect={onZonesSelect}
           onPaymentComplete={onPaymentComplete}
           onNewBooking={onNewBooking}
+          onStepChange={onStepChange}
         />
       </div>
     </motion.div>
