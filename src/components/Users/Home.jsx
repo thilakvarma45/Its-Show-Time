@@ -87,9 +87,6 @@ const Home = ({ onMovieSelect, onEventSelect, user }) => {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-2 tracking-widest uppercase">
-          Its Show Time
-        </h1>
         <p className="text-slate-600 text-lg">
           {user?.name ? `Welcome back, ${user.name}.` : 'Discover Your Next Experience'}
         </p>
