@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { Search, MapPin, ChevronDown } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import Auth from './components/Auth';
 import Home from './components/Users/Home';
@@ -12,6 +13,7 @@ import ProfileDropdown from './components/Users/ProfileDropdown';
 import Settings from './components/Settings';
 import MyBookings from './components/Users/MyBookings';
 import Wishlist from './components/Users/Wishlist';
+import HelpAndSupport from './components/Users/HelpAndSupport';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, user }) => {
@@ -25,7 +27,7 @@ const ProtectedRoute = ({ children, user }) => {
 const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
@@ -34,19 +36,48 @@ const AppContent = () => {
   const [view, setView] = useState('HOME');
   const [bookingType, setBookingType] = useState('MOVIE');
   const [bookingStep, setBookingStep] = useState(1);
-  
+
   // Movie state
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [selectedShow, setSelectedShow] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
-  
+
   // Event state
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedZones, setSelectedZones] = useState({});
-  
+
   // Shared state
   const [totalPrice, setTotalPrice] = useState(0);
+
+  // Wishlist state
+  const [wishlist, setWishlist] = useState([]);
+
+  // Global search and location state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCity, setSelectedCity] = useState('Hyderabad');
+  const cities = [
+    'Hyderabad', 'New Delhi', 'Mumbai', 'Bengaluru', 'Warangal',
+    'Ahmedabad', 'Chennai', 'Kolkata', 'Pune', 'Jaipur',
+    'Lucknow', 'Chandigarh', 'Kochi', 'Visakhapatnam'
+  ];
+
+  // Handler: Toggle wishlist item
+  const handleToggleWishlist = (item) => {
+    setWishlist(prev => {
+      const exists = prev.some(w => w.id === item.id && w.type === item.type);
+      if (exists) {
+        return prev.filter(w => !(w.id === item.id && w.type === item.type));
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  // Handler: Remove from wishlist
+  const handleRemoveFromWishlist = (id, type) => {
+    setWishlist(prev => prev.filter(w => !(w.id === id && w.type === type)));
+  };
 
   // Handler: Movie selection from Home - navigate to movie details
   const handleMovieSelect = (movie) => {
@@ -175,6 +206,9 @@ const AppContent = () => {
     } else if (action === 'wishlist') {
       setView('WISHLIST');
       navigate('/wishlist');
+    } else if (action === 'help-support') {
+      setView('HELP_SUPPORT');
+      navigate('/help-support');
     } else if (action === 'home') {
       handleNavigateHome();
     }
@@ -208,29 +242,29 @@ const AppContent = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Public Routes */}
-        <Route 
-          path="/" 
-          element={<LandingPage />} 
+        <Route
+          path="/"
+          element={<LandingPage />}
         />
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             isAuthenticated ? (
               <Navigate to={user?.role === 'owner' ? '/owner/dashboard' : '/home'} replace />
             ) : (
               <Auth onAuthSuccess={handleAuthSuccess} initialMode="login" />
             )
-          } 
+          }
         />
-        <Route 
-          path="/register" 
+        <Route
+          path="/register"
           element={
             isAuthenticated ? (
               <Navigate to={user?.role === 'owner' ? '/owner/dashboard' : '/home'} replace />
             ) : (
               <Auth onAuthSuccess={handleAuthSuccess} initialMode="register" />
             )
-          } 
+          }
         />
 
         {/* Protected Routes */}
@@ -241,15 +275,16 @@ const AppContent = () => {
               <div className="min-h-screen bg-cinema-light text-white">
                 <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
                   <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
+                    <div className="flex items-center justify-between h-16 gap-4">
+                      {/* Logo */}
                       <button
                         onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
+                        className="flex items-center gap-2 sm:gap-3 group flex-shrink-0"
                       >
                         <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
                           <span className="text-2xl">🎬</span>
                         </div>
-                        <div className="hidden sm:block">
+                        <div className="hidden md:block">
                           <h1 className="text-xl font-bold text-slate-900 tracking-tight">
                             ITS SHOW TIME
                           </h1>
@@ -258,6 +293,41 @@ const AppContent = () => {
                           </p>
                         </div>
                       </button>
+
+                      {/* Search Bar */}
+                      <div className="relative flex-1 max-w-md hidden sm:block">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search movies and events..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* City Selector */}
+                      <div className="relative flex items-center gap-2 flex-shrink-0 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 hover:border-violet-400 hover:ring-2 hover:ring-violet-100 transition-all cursor-pointer">
+                        <MapPin className="w-4 h-4 text-red-500 flex-shrink-0" />
+                        <select
+                          value={selectedCity}
+                          onChange={(e) => setSelectedCity(e.target.value)}
+                          className="appearance-none bg-transparent text-slate-800 font-medium text-sm focus:outline-none cursor-pointer pr-6 min-w-[100px]"
+                        >
+                          {cities.map(city => (
+                            <option
+                              key={city}
+                              value={city}
+                              className="py-2 px-3 text-slate-800 hover:bg-violet-50 bg-white"
+                            >
+                              {city}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+
+                      {/* Profile */}
                       <ProfileDropdown
                         user={user}
                         onLogout={handleLogout}
@@ -270,6 +340,10 @@ const AppContent = () => {
                   onMovieSelect={handleMovieSelect}
                   onEventSelect={handleEventSelect}
                   user={user}
+                  wishlist={wishlist}
+                  onToggleWishlist={handleToggleWishlist}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
                 />
               </div>
             </ProtectedRoute>
@@ -422,8 +496,19 @@ const AppContent = () => {
                   onBack={handleNavigateHome}
                   onMovieSelect={handleMovieSelect}
                   onEventSelect={handleEventSelect}
+                  wishlist={wishlist}
+                  onRemoveFromWishlist={handleRemoveFromWishlist}
                 />
               </div>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/help-support"
+          element={
+            <ProtectedRoute user={user}>
+              <HelpAndSupport onBack={handleNavigateHome} />
             </ProtectedRoute>
           }
         />

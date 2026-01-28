@@ -73,7 +73,7 @@ const transformMovie = (tmdbMovie) => {
     genre: getGenres(tmdbMovie.genre_ids, tmdbMovie.genres),
     rating: parseFloat(convertRating(tmdbMovie.vote_average)),
     duration: formatDuration(tmdbMovie.runtime || tmdbMovie.runtime_minutes),
-    poster: tmdbMovie.poster_path 
+    poster: tmdbMovie.poster_path
       ? `${TMDB_IMAGE_BASE_URL}${tmdbMovie.poster_path}`
       : 'https://via.placeholder.com/500x750?text=No+Poster',
     // Additional TMDB data that might be useful
@@ -105,7 +105,7 @@ export const fetchPopularMovies = async (page = 1) => {
     }
 
     const data = await response.json();
-    
+
     // Fetch detailed info for each movie to get runtime
     const moviesWithDetails = await Promise.all(
       data.results.map(async (movie) => {
@@ -163,7 +163,7 @@ export const searchMovies = async (query, page = 1) => {
     }
 
     const data = await response.json();
-    
+
     // Fetch detailed info for each movie to get runtime
     const moviesWithDetails = await Promise.all(
       data.results.map(async (movie) => {
@@ -218,12 +218,12 @@ export const getMovieById = async (movieId) => {
     }
 
     const data = await response.json();
-    
+
     // Transform genres from full genre objects
     const genres = data.genres ? data.genres.map(g => g.name) : [];
-    
+
     const baseMovie = transformMovie(data);
-    
+
     return {
       ...baseMovie,
       // Override genre with full genre list
@@ -242,7 +242,7 @@ export const getMovieById = async (movieId) => {
         profilePath: actor.profile_path ? `${TMDB_IMAGE_BASE_URL}${actor.profile_path}` : null,
         order: actor.order
       })) || [],
-      crew: data.credits?.crew?.filter(person => 
+      crew: data.credits?.crew?.filter(person =>
         ['Director', 'Producer', 'Screenplay', 'Writer'].includes(person.job)
       ).slice(0, 5).map(person => ({
         id: person.id,
@@ -262,3 +262,97 @@ export const getMovieById = async (movieId) => {
   }
 };
 
+/**
+ * Get movie recommendations based on a movie ID
+ */
+export const getMovieRecommendations = async (movieId) => {
+  try {
+    const response = await fetch(
+      `${TMDB_BASE_URL}/movie/${movieId}/recommendations?api_key=${TMDB_API_KEY}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`TMDB API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Transform and return first 8 recommendations
+    return data.results.slice(0, 8).map(transformMovie);
+  } catch (error) {
+    console.error('Error fetching movie recommendations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch trending movies for banner slider
+ */
+export const fetchTrendingMovies = async () => {
+  try {
+    const response = await fetch(
+      `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`TMDB API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Return top 5 trending movies with backdrop images
+    return data.results.slice(0, 5).map(movie => ({
+      id: movie.id,
+      title: movie.title,
+      overview: movie.overview,
+      rating: (movie.vote_average / 2).toFixed(1),
+      backdrop: movie.backdrop_path ? `${TMDB_IMAGE_BASE_URL_BACKDROP}${movie.backdrop_path}` : null,
+      poster: movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : null,
+      releaseDate: movie.release_date,
+      genreIds: movie.genre_ids
+    }));
+  } catch (error) {
+    console.error('Error fetching trending movies:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch now playing movies for recommendations
+ */
+export const fetchNowPlayingMovies = async () => {
+  try {
+    const response = await fetch(
+      `${TMDB_BASE_URL}/movie/now_playing?api_key=${TMDB_API_KEY}&region=IN`,
+      {
+        headers: {
+          'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`TMDB API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return data.results.slice(0, 10).map(transformMovie);
+  } catch (error) {
+    console.error('Error fetching now playing movies:', error);
+    throw error;
+  }
+};

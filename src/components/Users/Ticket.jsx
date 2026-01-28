@@ -4,7 +4,7 @@ import { CheckCircle, Download, Share2, Calendar, Clock, MapPin, Armchair } from
 const Ticket = ({ bookingDetails, onNewBooking }) => {
   const isEvent = bookingDetails.bookingType === 'EVENT';
   const item = isEvent ? bookingDetails.selectedEvent : bookingDetails.selectedMovie;
-  const currency = isEvent ? '₹' : '$';
+  const currency = '₹';
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

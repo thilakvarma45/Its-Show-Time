@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { CreditCard, Lock, Smartphone, Building2, Wallet } from 'lucide-react';
+import { CreditCard, Lock, Smartphone, Building2, Wallet, Tag, CheckCircle, XCircle } from 'lucide-react';
 import PaymentModal from './PaymentModal';
 
 const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
@@ -18,6 +18,56 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
     selectedWallet: '',
     selectedUpiApp: ''
   });
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState('');
+  const [discountAmount, setDiscountAmount] = useState(0);
+
+  // Available coupons
+  const availableCoupons = [
+    { code: 'FIRST50', discount: 50, type: 'percentage', maxDiscount: 100, description: '50% off up to ₹100' },
+    { code: 'FLAT20', discount: 20, type: 'flat', description: 'Flat ₹20 off' },
+    { code: 'SHOW10', discount: 10, type: 'percentage', maxDiscount: 50, description: '10% off up to ₹50' },
+    { code: 'WEEKEND25', discount: 25, type: 'percentage', maxDiscount: 75, description: '25% off up to ₹75' },
+  ];
+
+  // Calculate final price
+  const originalPrice = bookingDetails.totalPrice || 0;
+  const finalPrice = Math.max(0, originalPrice - discountAmount);
+
+  // Apply coupon handler
+  const handleApplyCoupon = () => {
+    setCouponError('');
+    const coupon = availableCoupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
+
+    if (!coupon) {
+      setCouponError('Invalid coupon code');
+      return;
+    }
+
+    let discount = 0;
+    if (coupon.type === 'percentage') {
+      discount = (originalPrice * coupon.discount) / 100;
+      if (coupon.maxDiscount) {
+        discount = Math.min(discount, coupon.maxDiscount);
+      }
+    } else {
+      discount = coupon.discount;
+    }
+
+    setDiscountAmount(discount);
+    setAppliedCoupon(coupon);
+    setCouponCode('');
+  };
+
+  // Remove coupon handler
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setDiscountAmount(0);
+    setCouponError('');
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -183,11 +233,101 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
               </div>
             </>
           )}
+          <div className="flex justify-between text-slate-600 pt-2 border-t border-slate-200">
+            <span>Subtotal</span>
+            <span className="text-slate-900">
+              ₹{originalPrice}
+            </span>
+          </div>
+
+          {/* Coupon Section */}
+          <div className="pt-4 border-t border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Tag className="w-4 h-4 text-slate-500" />
+              <span className="text-sm font-semibold text-slate-700">Apply Coupon</span>
+            </div>
+
+            {!appliedCoupon ? (
+              <>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="Enter coupon code"
+                    className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-sm
+                             focus:outline-none focus:border-blue-500 transition-colors uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={!couponCode.trim()}
+                    className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${couponCode.trim()
+                      ? bookingDetails.bookingType === 'MOVIE'
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
+                  >
+                    Apply
+                  </button>
+                </div>
+                {couponError && (
+                  <div className="flex items-center gap-1 mt-2 text-red-500 text-sm">
+                    <XCircle className="w-4 h-4" />
+                    {couponError}
+                  </div>
+                )}
+                <div className="mt-3 text-xs text-slate-500">
+                  Try: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">FIRST50</span>,
+                  <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded ml-1">FLAT20</span>,
+                  <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded ml-1">SHOW10</span>
+                </div>
+              </>
+            ) : (
+              <div className={`flex items-center justify-between p-3 rounded-lg ${bookingDetails.bookingType === 'MOVIE' ? 'bg-blue-50 border border-blue-200' : 'bg-purple-50 border border-purple-200'
+                }`}>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className={`w-5 h-5 ${bookingDetails.bookingType === 'MOVIE' ? 'text-blue-600' : 'text-purple-600'}`} />
+                  <div>
+                    <span className={`font-bold text-sm ${bookingDetails.bookingType === 'MOVIE' ? 'text-blue-700' : 'text-purple-700'}`}>
+                      {appliedCoupon.code}
+                    </span>
+                    <span className="text-slate-600 text-xs ml-2">{appliedCoupon.description}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="text-slate-500 hover:text-red-500 text-sm font-medium transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Discount Display */}
+          {appliedCoupon && (
+            <div className="flex justify-between text-green-600 font-medium">
+              <span>Discount ({appliedCoupon.code})</span>
+              <span>- ₹{discountAmount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* Final Amount */}
           <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-200">
             <span className="text-slate-900">Total Amount</span>
-            <span className={bookingDetails.bookingType === 'MOVIE' ? 'text-blue-600' : 'text-purple-600'}>
-              {bookingDetails.bookingType === 'MOVIE' ? '$' : '₹'}{bookingDetails.totalPrice}
-            </span>
+            <div className="text-right">
+              {appliedCoupon && (
+                <span className="text-slate-400 line-through text-sm mr-2">
+                  ₹{originalPrice}
+                </span>
+              )}
+              <span className={bookingDetails.bookingType === 'MOVIE' ? 'text-blue-600' : 'text-purple-600'}>
+                ₹{finalPrice.toFixed(2)}
+              </span>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -260,7 +400,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                   name="cardName"
                   value={formData.cardName}
                   onChange={handleChange}
-                  placeholder="JOHN DOE"
+                  placeholder="Name "
                   required
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
                            focus:outline-none focus:border-purple-600 transition-colors uppercase"
@@ -426,7 +566,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
               : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
               }`}
           >
-            Pay {bookingDetails.bookingType === 'MOVIE' ? '$' : '₹'}{bookingDetails.totalPrice}
+            Pay ₹{finalPrice.toFixed(2)}
           </button>
         </form>
       </motion.div>
