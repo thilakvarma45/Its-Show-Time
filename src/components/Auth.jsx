@@ -6,6 +6,7 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [role, setRole] = useState('user'); // 'user' or 'owner'
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,30 +17,47 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setError(''); // Clear error on input change
+  };
+
+  // Simple hash function for password (for demo purposes - use proper hashing in production)
+  const hashPassword = (password) => {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+      const char = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString();
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+    setError('');
+
     // If owner registration, save to localStorage and show success
     if (!isLogin && role === 'owner') {
-      // Store owner registration in localStorage
+      // Check if email already exists
+      const existingOwners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
+      const existingUsers = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
+
+      if (existingOwners.find(o => o.email === formData.email) || existingUsers.find(u => u.email === formData.email)) {
+        setError('This email is already registered. Please login instead.');
+        return;
+      }
+
+      // Store owner registration in localStorage with hashed password
       const ownerData = {
         email: formData.email,
         name: formData.name,
+        password: hashPassword(formData.password),
         role: 'owner',
         theatreName: formData.theatreName
       };
-      
-      // Get existing owners or create new array
-      const existingOwners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
-      // Check if email already exists, if not add it
-      const ownerExists = existingOwners.find(o => o.email === formData.email);
-      if (!ownerExists) {
-        existingOwners.push(ownerData);
-        localStorage.setItem('Theatre_Owners', JSON.stringify(existingOwners));
-      }
-      
+
+      existingOwners.push(ownerData);
+      localStorage.setItem('Theatre_Owners', JSON.stringify(existingOwners));
+
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
@@ -48,64 +66,81 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
       }, 3000);
       return;
     }
-    
+
     // For user registration, also store in localStorage
     if (!isLogin && role === 'user') {
+      // Check if email already exists
+      const existingOwners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
+      const existingUsers = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
+
+      if (existingOwners.find(o => o.email === formData.email) || existingUsers.find(u => u.email === formData.email)) {
+        setError('This email is already registered. Please login instead.');
+        return;
+      }
+
       const userData = {
         email: formData.email,
         name: formData.name,
+        password: hashPassword(formData.password),
         role: 'user'
       };
-      const existingUsers = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
-      const userExists = existingUsers.find(u => u.email === formData.email);
-      if (!userExists) {
-        existingUsers.push(userData);
-        localStorage.setItem('Show_Time_Users', JSON.stringify(existingUsers));
-      }
+      existingUsers.push(userData);
+      localStorage.setItem('Show_Time_Users', JSON.stringify(existingUsers));
+
+      // Auto-login after user registration
+      onAuthSuccess({
+        email: userData.email,
+        name: userData.name,
+        role: 'user'
+      });
+      return;
     }
-    
-    // Simulate authentication
-    // For login, check localStorage to determine role and retrieve user data
-    let userRole = 'user';
-    let userData = { ...formData };
-    
+
+    // Handle Login - Validate credentials
     if (isLogin) {
-      // Check if email exists in owners list
       const owners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
+      const users = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
+      const hashedPassword = hashPassword(formData.password);
+
+      // Check if email exists in owners list
       const owner = owners.find(o => o.email === formData.email);
       if (owner) {
-        userRole = 'owner';
-        userData = {
-          ...formData,
+        // Validate password
+        if (owner.password !== hashedPassword) {
+          setError('Invalid password. Please try again.');
+          return;
+        }
+        // Login successful as owner
+        onAuthSuccess({
+          email: owner.email,
           name: owner.name,
           theatreName: owner.theatreName,
           role: 'owner'
-        };
-      } else {
-        // Check if email exists in users list
-        const users = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
-        const user = users.find(u => u.email === formData.email);
-        if (user) {
-          userRole = 'user';
-          userData = {
-            ...formData,
-            name: user.name,
-            role: 'user'
-          };
-        } else {
-          // New login - default to user (could show error here)
-          userRole = 'user';
-        }
+        });
+        return;
       }
-    } else {
-      // Registration - use selected role
-      userRole = role;
+
+      // Check if email exists in users list
+      const user = users.find(u => u.email === formData.email);
+      if (user) {
+        // Validate password
+        if (user.password !== hashedPassword) {
+          setError('Invalid password. Please try again.');
+          return;
+        }
+        // Login successful as user
+        onAuthSuccess({
+          email: user.email,
+          name: user.name,
+          role: 'user'
+        });
+        return;
+      }
+
+      // Email not found
+      setError('No account found with this email. Please register first.');
+      return;
     }
-    
-    onAuthSuccess({
-      ...userData,
-      role: userRole
-    });
   };
 
   const isUser = role === 'user';
@@ -167,7 +202,7 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                   Its Show Time
                 </h1>
               </motion.div>
-              
+
               <AnimatePresence mode="wait">
                 <motion.h2
                   key={isLogin ? 'login' : 'register'}
@@ -197,11 +232,10 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                   <button
                     type="button"
                     onClick={() => setRole('user')}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      isUser
-                        ? 'border-amber-400 bg-amber-50 shadow-lg shadow-amber-500/20'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                    }`}
+                    className={`p-4 rounded-xl border-2 transition-all ${isUser
+                      ? 'border-amber-400 bg-amber-50 shadow-lg shadow-amber-500/20'
+                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                      }`}
                   >
                     <Ticket className={`w-6 h-6 mx-auto mb-2 ${isUser ? 'text-amber-600' : 'text-slate-400'}`} />
                     <div className={`text-xs font-semibold uppercase tracking-wider ${isUser ? 'text-amber-700' : 'text-slate-600'}`}>
@@ -216,11 +250,10 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                   <button
                     type="button"
                     onClick={() => setRole('owner')}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      !isUser
-                        ? 'border-violet-400 bg-violet-50 shadow-lg shadow-violet-500/20'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                    }`}
+                    className={`p-4 rounded-xl border-2 transition-all ${!isUser
+                      ? 'border-violet-400 bg-violet-50 shadow-lg shadow-violet-500/20'
+                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                      }`}
                   >
                     <Clapperboard className={`w-6 h-6 mx-auto mb-2 ${!isUser ? 'text-violet-600' : 'text-slate-400'}`} />
                     <div className={`text-xs font-semibold uppercase tracking-wider ${!isUser ? 'text-violet-700' : 'text-slate-600'}`}>
@@ -247,7 +280,23 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                     Owner Registered!
                   </div>
                   <div className="text-emerald-600 text-xs mt-1">
-                    Please log in to access your console.
+                    Please log in to access your Dashboard.
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Error Message */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-center"
+                >
+                  <div className="text-rose-700 font-semibold text-sm">
+                    {error}
                   </div>
                 </motion.div>
               )}
@@ -346,16 +395,15 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
                 type="submit"
-                className={`w-full py-4 bg-gradient-to-r ${
-                  isUser
-                    ? 'from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/30'
-                    : 'from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-lg shadow-violet-500/30'
-                } text-white rounded-xl font-semibold uppercase tracking-wider transition-all transform hover:scale-[1.02]`}
+                className={`w-full py-4 bg-gradient-to-r ${isUser
+                  ? 'from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/30'
+                  : 'from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-lg shadow-violet-500/30'
+                  } text-white rounded-xl font-semibold uppercase tracking-wider transition-all transform hover:scale-[1.02]`}
               >
-                {isLogin 
-                  ? 'Login' 
-                  : isUser 
-                    ? 'Register' 
+                {isLogin
+                  ? 'Login'
+                  : isUser
+                    ? 'Register'
                     : 'Open Box Office'
                 }
               </motion.button>
