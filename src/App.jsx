@@ -481,6 +481,7 @@ const AppContent = () => {
                 onSeatsSelect={handleSeatsSelect}
                 onPaymentComplete={handlePaymentComplete}
                 onNewBooking={handleNewBooking}
+                onStepChange={setBookingStep}
               />
             </ProtectedRoute>
           }
@@ -499,6 +500,7 @@ const AppContent = () => {
                 onZonesSelect={handleZonesSelect}
                 onPaymentComplete={handlePaymentComplete}
                 onNewBooking={handleNewBooking}
+                onStepChange={setBookingStep}
               />
             </ProtectedRoute>
           }

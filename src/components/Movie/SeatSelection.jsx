@@ -2,14 +2,14 @@ import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { generateSeats, SEAT_ROWS } from '../../data/mockData';
 
-const SeatSelection = ({ selectedShow, onContinue }) => {
-  const [selectedSeats, setSelectedSeats] = useState([]);
+const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) => {
+  const [selectedSeats, setSelectedSeats] = useState(initialSelectedSeats);
   const seats = useMemo(() => generateSeats(), []);
 
   const toggleSeat = (seatId, isTaken) => {
     if (isTaken) return;
-    
-    setSelectedSeats(prev => 
+
+    setSelectedSeats(prev =>
       prev.includes(seatId)
         ? prev.filter(id => id !== seatId)
         : [...prev, seatId]
@@ -30,9 +30,57 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
         animate={{ opacity: 1, y: 0 }}
         className="relative"
       >
-        <div className="mx-auto w-3/4 h-1 bg-slate-300 rounded-full mb-2" />
+
         <div className="text-center text-slate-500 text-sm font-medium uppercase tracking-wide">
-          Screen
+
+          <div className="relative mx-auto w-3/4 mb-6 perspective-[1000px]">
+
+            {/* Screen */}
+            <div
+              className="
+              h-4
+              bg-gradient-to-b from-blue-50 via-blue-100 to-blue-200
+              rounded-[100%_100%_40%_40%]
+              shadow-[0_20px_50px_rgba(147,197,253,0.45)]
+              border-t border-blue-100/60
+              opacity-90
+            "
+              style={{
+                transform: 'rotateX(-15deg) scale(1)',
+                boxShadow: '0 25px 30px -5px rgba(147, 197, 253, 0.45)'
+              }}
+            />
+
+            {/* Light Reflection */}
+            <div
+              className="
+              absolute top-2 left-1/2 -translate-x-1/2
+              w-[80%] h-16
+              bg-gradient-to-b from-blue-200/35 to-slate-900/0
+              blur-2xl
+              pointer-events-none
+            "
+            />
+
+
+            {/* Light Reflection */}
+            <div
+              className="
+                absolute top-2 left-1/2 -translate-x-1/2
+                w-[80%] h-16
+                bg-gradient-to-b from-[#FFFFF0]/30 to-transparent
+                blur-2xl
+                pointer-events-none
+              "
+            />
+
+            {/* Label */}
+            <div className="text-center text-slate-400 text-xs font-bold uppercase tracking-[0.3em] mt-8 opacity-70">
+              Screen
+            </div>
+          </div>
+
+
         </div>
       </motion.div>
 
@@ -79,9 +127,8 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
               className="flex items-center gap-3"
             >
               {/* Row Label */}
-              <div className={`w-10 text-center font-semibold text-sm ${
-                isVIP ? 'text-amber-600' : 'text-slate-600'
-              }`}>
+              <div className={`w-10 text-center font-semibold text-sm ${isVIP ? 'text-amber-600' : 'text-slate-600'
+                }`}>
                 {row.id}
               </div>
 
@@ -90,7 +137,7 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
                 {rowSeats.map((seat, index) => {
                   const isSelected = selectedSeats.includes(seat.id);
                   const isTaken = seat.taken;
-                  
+
                   // Create aisle gap after 7th seat (middle aisle)
                   if (index === 7) {
                     return (
@@ -110,13 +157,13 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
                         rounded
                         border-2
                         flex items-center justify-center
-                        ${isTaken 
-                          ? 'bg-slate-400 border-slate-500 text-slate-300 cursor-not-allowed opacity-60' 
+                        ${isTaken
+                          ? 'bg-slate-400 border-slate-500 text-slate-300 cursor-not-allowed opacity-60'
                           : isSelected
-                            ? 'bg-blue-500 border-blue-600 text-white shadow-md scale-105'
+                            ? 'bg-blue-500 border-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.6)] scale-110 ring-2 ring-blue-400 ring-offset-2'
                             : isVIP
-                              ? 'bg-amber-200 border-amber-400 text-amber-700 hover:bg-amber-300 hover:scale-105'
-                              : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300 hover:border-blue-400 hover:scale-105'
+                              ? 'bg-amber-200 border-amber-400 text-amber-900 hover:bg-amber-300 hover:scale-110 hover:shadow-[0_0_20px_rgba(251,191,36,0.6)] hover:border-amber-500 transition-all duration-300'
+                              : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300 hover:border-blue-400 hover:scale-110 hover:shadow-[0_0_20px_rgba(96,165,250,0.6)] transition-all duration-300'
                         }
                       `}
                       title={`Seat ${seat.id}`}
@@ -146,15 +193,32 @@ const SeatSelection = ({ selectedShow, onContinue }) => {
           className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-200 p-6 shadow-lg z-50"
         >
           <div className="flex items-center justify-between max-w-6xl mx-auto">
-            <div>
-              <div className="text-slate-500 text-sm mb-1">Selected Seats</div>
-              <div className="text-slate-900 text-2xl font-bold">
-                {selectedSeats.length} {selectedSeats.length === 1 ? 'Seat' : 'Seats'} • ₹{totalPrice}
+            <div className="flex items-center gap-8">
+              {/* Selected Seats Info */}
+              <div>
+                <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Selections</div>
+                <div className="text-slate-900 text-2xl font-bold">
+                  {selectedSeats.length} {selectedSeats.length === 1 ? 'Seat' : 'Seats'} • ₹{totalPrice}
+                </div>
+                <div className="text-slate-600 text-sm mt-1 font-medium">
+                  {selectedSeats.sort().join(', ')}
+                </div>
               </div>
-              <div className="text-slate-600 text-sm mt-1 font-medium">
-                {selectedSeats.sort().join(', ')}
+
+              {/* Show Details */}
+              <div className="hidden md:block h-12 w-px bg-slate-300" />
+
+              <div className="hidden md:block">
+                <div className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-1">Show Details</div>
+                <div className="text-slate-900 font-bold">
+                  {selectedShow.theatreName}
+                </div>
+                <div className="text-slate-600 text-sm">
+                  {selectedShow.date?.day} {selectedShow.date?.date} • {selectedShow.time}
+                </div>
               </div>
             </div>
+
             <button
               onClick={() => onContinue(selectedSeats, totalPrice)}
               className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors shadow-md"

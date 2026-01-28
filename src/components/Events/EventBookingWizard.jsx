@@ -19,15 +19,57 @@ const EventBookingWizard = ({
   onDateSelect, 
   onZonesSelect, 
   onPaymentComplete,
-  onNewBooking 
+  onNewBooking,
+  onStepChange
 }) => {
+  const canGoToStep = (targetStepId) => {
+    if (!onStepChange) return false;
+    if (targetStepId === currentStep) return false;
+
+    // Always allow going back
+    if (targetStepId < currentStep) return true;
+
+    // Forward guards based on selected data
+    if (targetStepId === 2) {
+      return !!bookingDetails?.selectedDate;
+    }
+
+    if (targetStepId === 3) {
+      const zones = bookingDetails?.selectedZones || {};
+      const totalPasses = Object.values(zones).reduce(
+        (sum, cats) => sum + Object.values(cats).reduce((s, q) => s + q, 0),
+        0
+      );
+      return !!bookingDetails?.selectedDate && totalPasses > 0;
+    }
+
+    if (targetStepId === 4) {
+      return currentStep === 4;
+    }
+
+    return false;
+  };
   return (
     <div className="h-full flex flex-col">
       {/* Stepper Header */}
       <div className="bg-white border-b border-slate-200 px-4 sm:px-8 py-6 overflow-x-auto">
         <div className="flex items-center justify-between max-w-3xl mx-auto gap-3 min-w-[560px]">
-          {STEPS.map((step, index) => (
-            <div key={step.id} className="flex items-center flex-1">
+          {STEPS.map((step, index) => {
+            const isClickable = canGoToStep(step.id);
+
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => {
+                  if (isClickable) {
+                    onStepChange(step.id);
+                  }
+                }}
+                className={`flex items-center flex-1 text-left focus:outline-none ${
+                  isClickable ? 'cursor-pointer' : 'cursor-default'
+                }`}
+              >
               {/* Step Circle */}
               <div className="flex flex-col items-center flex-1">
                 <div
@@ -62,8 +104,8 @@ const EventBookingWizard = ({
                   }`}
                 />
               )}
-            </div>
-          ))}
+            </button>
+          );})}
         </div>
       </div>
 

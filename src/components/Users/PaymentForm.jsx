@@ -7,7 +7,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
   const [paymentMethod, setPaymentMethod] = useState('card'); // 'card', 'upi', 'netbanking', 'wallet'
   const [showModal, setShowModal] = useState(false);
   const [modalStatus, setModalStatus] = useState('processing'); // 'processing', 'completed', 'failed'
-  
+
   const [formData, setFormData] = useState({
     cardNumber: '',
     cardName: '',
@@ -21,7 +21,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Validate based on payment method
     if (paymentMethod === 'card' && (!formData.cardNumber || !formData.cardName || !formData.expiry || !formData.cvv)) {
       return;
@@ -35,14 +35,14 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
     if (paymentMethod === 'wallet' && !formData.selectedWallet) {
       return;
     }
-    
+
     // Show processing modal
     setShowModal(true);
     setModalStatus('processing');
-    
+
     // Simulate payment processing (longer for UPI to show confirmation message)
     const processingTime = paymentMethod === 'upi' ? 3000 : 2500;
-    
+
     setTimeout(() => {
       setModalStatus('completed');
       // After completion, proceed to ticket
@@ -66,7 +66,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
   ];
 
   const upiApps = [
-    { 
+    {
       name: 'Google Pay',
       logo: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-12 h-12">
@@ -74,7 +74,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
         </svg>
       )
     },
-    { 
+    {
       name: 'PhonePe',
       logo: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-12 h-12">
@@ -82,7 +82,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
         </svg>
       )
     },
-    { 
+    {
       name: 'BHIM',
       logo: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-12 h-12">
@@ -90,7 +90,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
         </svg>
       )
     },
-    { 
+    {
       name: 'Paytm',
       logo: (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-12 h-12">
@@ -135,6 +135,12 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                 <span className="text-slate-900">{bookingDetails.selectedShow?.theatreName}</span>
               </div>
               <div className="flex justify-between text-slate-600">
+                <span>Date</span>
+                <span className="text-slate-900">
+                  {bookingDetails.selectedShow?.date?.day}, {bookingDetails.selectedShow?.date?.date}
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-600">
                 <span>Show Time</span>
                 <span className="text-slate-900">{bookingDetails.selectedShow?.time}</span>
               </div>
@@ -170,7 +176,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
               <div className="flex justify-between text-slate-600 pt-3 border-t border-slate-200">
                 <span>Total Passes</span>
                 <span className="text-slate-900">
-                  {Object.values(bookingDetails.selectedZones || {}).reduce((sum, cats) => 
+                  {Object.values(bookingDetails.selectedZones || {}).reduce((sum, cats) =>
                     sum + Object.values(cats).reduce((s, q) => s + q, 0), 0
                   )}
                 </span>
@@ -194,7 +200,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
         className="bg-white rounded-lg p-6 border border-slate-200 shadow-md"
       >
         <h3 className="text-slate-900 font-bold uppercase tracking-wider mb-4">Select Payment Method</h3>
-        
+
         {/* Payment Method Tabs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {paymentMethods.map((method) => {
@@ -205,24 +211,21 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                 key={method.id}
                 type="button"
                 onClick={() => setPaymentMethod(method.id)}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  isActive
-                    ? bookingDetails.bookingType === 'MOVIE'
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-purple-600 bg-purple-50'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
+                className={`p-4 rounded-lg border-2 transition-all ${isActive
+                  ? bookingDetails.bookingType === 'MOVIE'
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-purple-600 bg-purple-50'
+                  : 'border-slate-200 hover:border-slate-300'
+                  }`}
               >
-                <Icon className={`w-6 h-6 mx-auto mb-2 ${
-                  isActive
-                    ? bookingDetails.bookingType === 'MOVIE'
-                      ? 'text-blue-600'
-                      : 'text-purple-600'
-                    : 'text-slate-400'
-                }`} />
-                <div className={`text-xs font-semibold ${
-                  isActive ? 'text-slate-900' : 'text-slate-600'
-                }`}>
+                <Icon className={`w-6 h-6 mx-auto mb-2 ${isActive
+                  ? bookingDetails.bookingType === 'MOVIE'
+                    ? 'text-blue-600'
+                    : 'text-purple-600'
+                  : 'text-slate-400'
+                  }`} />
+                <div className={`text-xs font-semibold ${isActive ? 'text-slate-900' : 'text-slate-600'
+                  }`}>
                   {method.label}
                 </div>
               </button>
@@ -324,9 +327,8 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                       <button
                         key={app.name}
                         type="button"
-                        className={`bg-white p-6 rounded-2xl hover:scale-105 transition-all flex flex-col items-center justify-center aspect-square shadow-lg border-2 ${
-                          isSelected ? 'border-purple-500 ring-2 ring-purple-200 scale-105' : 'border-slate-200 hover:border-slate-300'
-                        }`}
+                        className={`bg-white p-6 rounded-2xl hover:scale-105 transition-all flex flex-col items-center justify-center aspect-square shadow-lg border-2 ${isSelected ? 'border-purple-500 ring-2 ring-purple-200 scale-105' : 'border-slate-200 hover:border-slate-300'
+                          }`}
                         onClick={() => {
                           setFormData(prev => ({ ...prev, selectedUpiApp: app.name }));
                         }}
@@ -385,22 +387,20 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                     key={wallet.name}
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, selectedWallet: wallet.name }))}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      formData.selectedWallet === wallet.name
-                        ? bookingDetails.bookingType === 'MOVIE'
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-purple-600 bg-purple-50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
+                    className={`p-4 rounded-lg border-2 transition-all ${formData.selectedWallet === wallet.name
+                      ? bookingDetails.bookingType === 'MOVIE'
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-purple-600 bg-purple-50'
+                      : 'border-slate-200 hover:border-slate-300'
+                      }`}
                   >
                     <div className="text-center">
-                      <div className={`text-lg font-bold mb-1 ${
-                        formData.selectedWallet === wallet.name
-                          ? bookingDetails.bookingType === 'MOVIE'
-                            ? 'text-blue-600'
-                            : 'text-purple-600'
-                          : 'text-slate-900'
-                      }`}>{wallet.logo}</div>
+                      <div className={`text-lg font-bold mb-1 ${formData.selectedWallet === wallet.name
+                        ? bookingDetails.bookingType === 'MOVIE'
+                          ? 'text-blue-600'
+                          : 'text-purple-600'
+                        : 'text-slate-900'
+                        }`}>{wallet.logo}</div>
                       <div className="text-xs text-slate-600">{wallet.name}</div>
                     </div>
                   </button>
@@ -421,11 +421,10 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
           {/* Submit Button */}
           <button
             type="submit"
-            className={`w-full mt-6 px-6 py-4 text-white rounded-lg font-semibold uppercase tracking-wider transition-all shadow-lg ${
-              bookingDetails.bookingType === 'MOVIE' 
-                ? 'bg-blue-600 hover:bg-blue-700' 
-                : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
-            }`}
+            className={`w-full mt-6 px-6 py-4 text-white rounded-lg font-semibold uppercase tracking-wider transition-all shadow-lg ${bookingDetails.bookingType === 'MOVIE'
+              ? 'bg-blue-600 hover:bg-blue-700'
+              : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
+              }`}
           >
             Pay {bookingDetails.bookingType === 'MOVIE' ? '$' : '₹'}{bookingDetails.totalPrice}
           </button>
@@ -433,8 +432,8 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
       </motion.div>
 
       {/* Payment Modal */}
-      <PaymentModal 
-        isOpen={showModal} 
+      <PaymentModal
+        isOpen={showModal}
         status={modalStatus}
         bookingType={bookingDetails.bookingType}
         paymentMethod={paymentMethod}

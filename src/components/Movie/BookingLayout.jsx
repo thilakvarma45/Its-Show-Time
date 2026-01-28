@@ -4,15 +4,16 @@ import BookingWizard from './BookingWizard';
 import PaymentForm from '../Users/PaymentForm';
 import Ticket from '../Users/Ticket';
 
-const BookingLayout = ({ 
-  selectedMovie, 
-  currentStep, 
-  bookingDetails, 
+const BookingLayout = ({
+  selectedMovie,
+  currentStep,
+  bookingDetails,
   onBack,
   onTimeSelect,
   onSeatsSelect,
   onPaymentComplete,
-  onNewBooking
+  onNewBooking,
+  onStepChange
 }) => {
   return (
     <motion.div
@@ -35,6 +36,9 @@ const BookingLayout = ({
           onSeatsSelect={onSeatsSelect}
           onPaymentComplete={onPaymentComplete}
           onNewBooking={onNewBooking}
+          onStepChange={onStepChange}
+          //to make Back button work
+          onBack={() => onStepChange(currentStep - 1)}
         />
       </div>
     </motion.div>
