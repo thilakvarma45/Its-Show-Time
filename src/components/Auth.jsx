@@ -32,12 +32,12 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
       };
       
       // Get existing owners or create new array
-      const existingOwners = JSON.parse(localStorage.getItem('cineverse_owners') || '[]');
+      const existingOwners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
       // Check if email already exists, if not add it
       const ownerExists = existingOwners.find(o => o.email === formData.email);
       if (!ownerExists) {
         existingOwners.push(ownerData);
-        localStorage.setItem('cineverse_owners', JSON.stringify(existingOwners));
+        localStorage.setItem('Theatre_Owners', JSON.stringify(existingOwners));
       }
       
       setShowSuccess(true);
@@ -56,11 +56,11 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
         name: formData.name,
         role: 'user'
       };
-      const existingUsers = JSON.parse(localStorage.getItem('cineverse_users') || '[]');
+      const existingUsers = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
       const userExists = existingUsers.find(u => u.email === formData.email);
       if (!userExists) {
         existingUsers.push(userData);
-        localStorage.setItem('cineverse_users', JSON.stringify(existingUsers));
+        localStorage.setItem('Show_Time_Users', JSON.stringify(existingUsers));
       }
     }
     
@@ -71,7 +71,7 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
     
     if (isLogin) {
       // Check if email exists in owners list
-      const owners = JSON.parse(localStorage.getItem('cineverse_owners') || '[]');
+      const owners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
       const owner = owners.find(o => o.email === formData.email);
       if (owner) {
         userRole = 'owner';
@@ -83,7 +83,7 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
         };
       } else {
         // Check if email exists in users list
-        const users = JSON.parse(localStorage.getItem('cineverse_users') || '[]');
+        const users = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
         const user = users.find(u => u.email === formData.email);
         if (user) {
           userRole = 'user';
@@ -244,7 +244,7 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                   className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center"
                 >
                   <div className="text-emerald-700 font-semibold uppercase tracking-wider text-sm">
-                    Studio Registered!
+                    Owner Registered!
                   </div>
                   <div className="text-emerald-600 text-xs mt-1">
                     Please log in to access your console.
@@ -396,4 +396,3 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
 };
 
 export default Auth;
-

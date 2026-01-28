@@ -16,12 +16,14 @@ import {
   CheckCircle2,
   Play,
   Camera,
+  Video,
   Popcorn
 } from 'lucide-react';
 
 const LandingPage = () => {
   const [hoveredFeature, setHoveredFeature] = useState(null);
 
+  // For Movie Lovers
   const userFeatures = [
     {
       icon: Search,
@@ -48,7 +50,7 @@ const LandingPage = () => {
       color: 'from-amber-500 to-amber-600'
     }
   ];
-
+  // For Venue Owners
   const ownerFeatures = [
     {
       icon: BarChart3,
@@ -76,6 +78,7 @@ const LandingPage = () => {
     }
   ];
 
+  // Why Choose Show Time
   const benefits = [
     'Secure payment processing',
     'Real-time seat availability',
@@ -135,9 +138,9 @@ const LandingPage = () => {
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-2xl mb-8 shadow-xl"
+              className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-2xl mb-8 shadow-xl"
             >
-              <Camera className="w-12 h-12 text-white" />
+              <Video className="w-12 h-12 text-white" />
             </motion.div>
             
             <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black text-slate-900 mb-6 leading-tight">
@@ -154,17 +157,17 @@ const LandingPage = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
+                to="/login"
+                className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold text-lg hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 transition-all shadow-md"
+              >
+                Login
+              </Link>
+              <Link
                 to="/register"
                 className="group px-8 py-4 bg-gradient-to-r from-blue-400 to-cyan-400 text-white rounded-xl font-bold text-lg hover:from-blue-500 hover:to-cyan-500 transition-all flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Get Started
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                to="/login"
-                className="px-8 py-4 bg-white text-slate-900 rounded-xl font-bold text-lg hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 transition-all shadow-md"
-              >
-                Login
               </Link>
             </div>
 
