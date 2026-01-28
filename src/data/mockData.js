@@ -1,4 +1,4 @@
-// Mock data for CineVerse booking system
+// Mock data for Its Show Time booking system
 
 export const MOVIES = [
   {
@@ -267,13 +267,13 @@ export const EVENTS = [
 export const OWNER_PROFILE = {
   name: "Nolan Enterprises",
   id: 1,
-  email: "nolan@cineverse.com"
+  email: "nolan@itsshowtime.com"
 };
 
 export const VENUE_LIST = [
   {
     id: 1,
-    name: "CineVerse Grand",
+    name: "Its Show Time Grand",
     location: "Downtown Plaza",
     address: "123 Main Street",
     pincode: "400001",
@@ -284,7 +284,7 @@ export const VENUE_LIST = [
   },
   {
     id: 2,
-    name: "CineVerse Premium",
+    name: "Its Show Time Premium",
     location: "Mall Road",
     address: "456 Shopping District",
     pincode: "400002",
@@ -306,7 +306,7 @@ export const VENUE_LIST = [
   },
   {
     id: 4,
-    name: "CineVerse Classic",
+    name: "Its Show Time Classic",
     location: "Heritage Quarter",
     address: "321 Old Town",
     pincode: "400004",
