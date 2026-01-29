@@ -3,10 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Search, SlidersHorizontal } from 'lucide-react';
 import { AVAILABLE_AMENITIES } from '../../data/mockData';
 import VenueCard from './VenueCard';
+import { toast } from 'react-toastify';
 
 const VenueManagement = ({ owner }) => {
   const [venues, setVenues] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [confirmDeleteVenueId, setConfirmDeleteVenueId] = useState(null);
+  const [deletingVenue, setDeletingVenue] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'theatre', 'event_ground'
   const [formData, setFormData] = useState({
@@ -117,13 +120,37 @@ const VenueManagement = ({ owner }) => {
       setShowAddModal(false);
     } catch (err) {
       console.error('Error creating venue:', err);
-      alert('Failed to create venue. Please try again.');
+      toast.error('Failed to create venue. Please try again.');
     }
   };
 
   const handleDelete = (venueId) => {
-    if (window.confirm('Are you sure you want to delete this venue?')) {
-      setVenues(venues.filter(v => v.id !== venueId));
+    setConfirmDeleteVenueId(venueId);
+  };
+
+  const confirmDelete = async () => {
+    if (!confirmDeleteVenueId) return;
+    setDeletingVenue(true);
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/venues/${confirmDeleteVenueId}${owner?.id ? `?ownerId=${owner.id}` : ''}`,
+        { method: 'DELETE' }
+      );
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        toast.error(text || 'Failed to delete venue');
+        return;
+      }
+
+      setVenues((prev) => prev.filter((v) => v.id !== confirmDeleteVenueId));
+      toast.success('Venue deleted');
+      setConfirmDeleteVenueId(null);
+    } catch (e) {
+      console.error('Error deleting venue:', e);
+      toast.error('Failed to delete venue. Please try again.');
+    } finally {
+      setDeletingVenue(false);
     }
   };
 
@@ -409,6 +436,53 @@ const VenueManagement = ({ owner }) => {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm Delete Modal */}
+      <AnimatePresence>
+        {confirmDeleteVenueId != null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setConfirmDeleteVenueId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.97, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.97, opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-slate-200 overflow-hidden"
+            >
+              <div className="p-5">
+                <h3 className="text-lg font-bold text-slate-900">Delete venue?</h3>
+                <p className="text-sm text-slate-600 mt-2">
+                  This will remove the venue from your list. Are you sure you want to continue?
+                </p>
+              </div>
+              <div className="px-5 pb-5 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteVenueId(null)}
+                  disabled={deletingVenue}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold transition-colors"
+                >
+                  No
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  disabled={deletingVenue}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold transition-colors"
+                >
+                  {deletingVenue ? 'Deleting…' : 'Yes, delete'}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

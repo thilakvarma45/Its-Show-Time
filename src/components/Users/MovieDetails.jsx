@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
+import { formatDate, formatCurrency } from '../../utils/formatters';
 import {
   ArrowLeft,
   Star,
@@ -22,6 +23,7 @@ const MovieDetails = ({ onBookNow }) => {
   const [error, setError] = useState(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [hasShows, setHasShows] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
 
   useEffect(() => {
     const loadMovie = async () => {
@@ -70,6 +72,26 @@ const MovieDetails = ({ onBookNow }) => {
     checkMovieShows();
   }, [movie]);
 
+  // Load recommendations for this movie
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (!movie || !movie.id) {
+        setRecommendations([]);
+        return;
+      }
+
+      try {
+        const recs = await getMovieRecommendations(movie.id);
+        setRecommendations(recs);
+      } catch (err) {
+        console.error('Error loading recommendations:', err);
+        setRecommendations([]);
+      }
+    };
+
+    loadRecommendations();
+  }, [movie]);
+
   const handleBookNow = () => {
     if (!hasShows) return;
     if (movie && onBookNow) {
@@ -106,22 +128,6 @@ const MovieDetails = ({ onBookNow }) => {
       </div>
     );
   }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  };
-
-  const formatCurrency = (amount) => {
-    if (!amount || amount === 0) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
 
   return (
     <div className="min-h-screen bg-white">

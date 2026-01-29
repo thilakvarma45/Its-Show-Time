@@ -1,9 +1,8 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Heart, Star, Calendar, Trash2 } from 'lucide-react';
+import EmptyState from '../common/EmptyState';
 
-const Wishlist = ({ user, onBack, onMovieSelect, onEventSelect }) => {
-  // No mock data; start with an empty wishlist until backend integration is added.
-  const wishlistItems = [];
+const Wishlist = ({ user, wishlist = [], onBack, onMovieSelect, onEventSelect, onRemoveFromWishlist }) => {
 
   const handleRemove = (id, type) => {
     if (onRemoveFromWishlist) {
@@ -52,11 +51,21 @@ const Wishlist = ({ user, onBack, onMovieSelect, onEventSelect }) => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white/80 backdrop-blur-xl border border-slate-200 rounded-2xl p-12 text-center shadow-lg"
+            className="bg-white/80 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-lg"
           >
-            <Heart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-800 mb-2">Your wishlist is empty</h3>
-            <p className="text-slate-500">Add movies and events to your wishlist to keep track of what you want to watch!</p>
+            <EmptyState
+              icon={<Heart className="text-slate-300" />}
+              title="Your wishlist is empty"
+              description="Add movies and events to your wishlist to keep track of what you want to watch!"
+              action={
+                <button
+                  onClick={onBack}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Browse Movies & Events
+                </button>
+              }
+            />
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

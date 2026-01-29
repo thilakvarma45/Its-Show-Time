@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Calendar, Search, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { Star, Calendar, Search, SlidersHorizontal, Loader2, Heart } from 'lucide-react';
 import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
 
 const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishlist, searchQuery = '', setSearchQuery }) => {
@@ -10,13 +10,6 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Trending banner state
-  const [trendingMovies, setTrendingMovies] = useState([]);
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  // Recommendations state
-  const [recommendedMovies, setRecommendedMovies] = useState([]);
 
   // Fetch movies from TMDB on mount and when search query changes
   useEffect(() => {
@@ -114,8 +107,38 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
 
   return (
     <div className="min-h-screen bg-cinema-light">
-      {/* Filters and Sort - Below Global Header */}
-      <div className="px-4 sm:px-8 py-4">
+      {/* Search Bar */}
+      <div className="bg-white border-b border-slate-200 py-6 px-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative"
+          >
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="w-5 h-5 text-slate-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for movies or events..."
+              className="w-full pl-12 pr-12 py-3.5 bg-white border-2 border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-base"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <span className="text-2xl font-light">×</span>
+              </button>
+            )}
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Filters and Sort - Below Search */}
+      <div className="px-4 sm:px-8 py-4 bg-white border-b border-slate-200">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -165,132 +188,7 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
         </motion.div>
       </div>
 
-      {/* Trending Movies Banner Slider */}
-      {trendingMovies.length > 0 && (
-        <div className="relative h-[400px] sm:h-[500px] overflow-hidden mx-2.5 rounded-lg bg-slate-900" style={{ width: 'calc(100% - 20px)' }}>
-          <AnimatePresence mode="sync">
-            <motion.div
-              key={currentSlide}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="absolute inset-0"
-            >
-              {/* Backdrop Image */}
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${trendingMovies[currentSlide]?.backdrop})` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-              </div>
-
-              {/* Content */}
-              <div className="relative h-full flex items-center px-8 sm:px-16">
-                <div className="max-w-2xl">
-                  <div className="flex items-center gap-2 mb-3">
-                    <TrendingUp className="w-5 h-5 text-red-500" />
-                    <span className="text-red-400 font-semibold text-sm uppercase tracking-wide">
-                      Trending Now
-                    </span>
-                  </div>
-                  <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4">
-                    {trendingMovies[currentSlide]?.title}
-                  </h2>
-                  <p className="text-white/80 text-sm sm:text-base line-clamp-3 mb-6 max-w-xl">
-                    {trendingMovies[currentSlide]?.overview}
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                      <span className="text-white font-semibold">{trendingMovies[currentSlide]?.rating}/5</span>
-                    </div>
-                    <button
-                      onClick={() => onMovieSelect({ ...trendingMovies[currentSlide], type: 'movie' })}
-                      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-full font-semibold hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg"
-                    >
-                      <Play className="w-5 h-5 fill-white" />
-                      Book Now
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Navigation Arrows */}
-          <button
-            onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all"
-          >
-            <ChevronLeft className="w-6 h-6 text-white" />
-          </button>
-          <button
-            onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center transition-all"
-          >
-            <ChevronRight className="w-6 h-6 text-white" />
-          </button>
-
-          {/* Slide Indicators */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-            {trendingMovies.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`w-2 h-2 rounded-full transition-all ${index === currentSlide ? 'bg-white w-8' : 'bg-white/40 hover:bg-white/60'
-                  }`}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="px-4 sm:px-8 py-8">
-        {/* Recommended For You Section */}
-        {recommendedMovies.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-10"
-          >
-            <div className="flex items-center gap-2 mb-6">
-              <Film className="w-6 h-6 text-violet-600" />
-              <h2 className="text-2xl font-bold text-slate-900">Recommended For You</h2>
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-              {recommendedMovies.map((movie, index) => (
-                <motion.div
-                  key={movie.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => onMovieSelect({ ...movie, type: 'movie' })}
-                  className="flex-shrink-0 w-40 cursor-pointer group"
-                >
-                  <div className="relative overflow-hidden rounded-lg shadow-lg">
-                    <img
-                      src={movie.poster}
-                      alt={movie.title}
-                      className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                        <span className="text-white text-xs font-medium">{movie.rating}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <h3 className="mt-2 text-sm font-semibold text-slate-900 line-clamp-2 group-hover:text-violet-600 transition-colors">
-                    {movie.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{movie.genre?.slice(0, 2).join(', ')}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
-        )}
-
         {/* Mixed Grid - Movies & Events */}
         {loading ? (
           <motion.div

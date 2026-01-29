@@ -1,8 +1,6 @@
 import { motion } from 'framer-motion';
 import MovieSidebar from './MovieSidebar';
 import BookingWizard from './BookingWizard';
-import PaymentForm from '../Users/PaymentForm';
-import Ticket from '../Users/Ticket';
 
 const BookingLayout = ({
   selectedMovie,
@@ -20,15 +18,15 @@ const BookingLayout = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-cinema-light flex flex-col lg:flex-row"
+      className="min-h-screen bg-cinema-light flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden"
     >
-      {/* Left Sidebar - 30% */}
-      <div className="w-full lg:w-[30%] lg:min-w-[320px] lg:max-w-[400px]">
+      {/* Left Sidebar - Static */}
+      <div className="w-full lg:w-[30%] lg:min-w-[320px] lg:max-w-[400px] lg:overflow-y-auto">
         <MovieSidebar movie={selectedMovie} onBack={onBack} />
       </div>
 
-      {/* Right Panel - 70% */}
-      <div className="flex-1 w-full bg-cinema-light">
+      {/* Right Panel - Scrollable */}
+      <div className="flex-1 w-full bg-cinema-light lg:overflow-y-auto">
         <BookingWizard
           currentStep={currentStep}
           bookingDetails={bookingDetails}

@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Calendar, X, Plus, Loader2, Search } from 'lucide-react';
+import { Film, Calendar, X, Plus, Loader2, Search, Upload, Image as ImageIcon } from 'lucide-react';
 import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
+import { toast } from 'react-toastify';
 
 const SmartScheduler = ({ owner }) => {
   const [activeTab, setActiveTab] = useState('MOVIE'); // 'MOVIE' | 'EVENT'
@@ -99,6 +100,10 @@ const SmartScheduler = ({ owner }) => {
     dates: [],
     zones: []
   });
+  
+  const [eventImageFile, setEventImageFile] = useState(null);
+  const [eventImagePreview, setEventImagePreview] = useState(null);
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
   // Suggested time slots
   const suggestedSlots = ['09:00 AM', '12:00 PM', '03:00 PM', '06:00 PM', '09:00 PM'];
@@ -221,15 +226,15 @@ const SmartScheduler = ({ owner }) => {
     e.preventDefault();
 
     if (!movieForm.venueId || !movieForm.movieId) {
-      alert('Please select both a venue and a movie.');
+      toast.error('Please select both a venue and a movie.');
       return;
     }
     if (!movieForm.startDate || !movieForm.endDate) {
-      alert('Please select a valid start and end date.');
+      toast.error('Please select a valid start and end date.');
       return;
     }
     if (movieForm.confirmedShows.length === 0) {
-      alert('Please add at least one show time.');
+      toast.error('Please add at least one show time.');
       return;
     }
 
@@ -240,7 +245,8 @@ const SmartScheduler = ({ owner }) => {
         startDate: movieForm.startDate,
         endDate: movieForm.endDate,
         showtimes: movieForm.confirmedShows,
-        standardPrice: Number(movieForm.goldPrice || 0),
+        silverPrice: Number(movieForm.silverPrice || 0),
+        goldPrice: Number(movieForm.goldPrice || 0),
         vipPrice: Number(movieForm.vipPrice || 0),
       };
 
@@ -253,14 +259,12 @@ const SmartScheduler = ({ owner }) => {
       if (!res.ok) {
         const text = await res.text();
         console.error('Failed to create schedule:', text);
-        alert('Failed to create movie schedule. Please check backend logs.');
+        toast.error('Failed to create movie schedule. Please check backend logs.');
         return;
       }
 
       const data = await res.json();
-      alert(
-        `Movie schedule created successfully!\n\nSchedule ID: ${data.scheduleId}\nGenerated shows: ${data.generatedShowCount}`
-      );
+      toast.success(`Movie schedule created! Schedule #${data.scheduleId} • Shows: ${data.generatedShowCount}`);
 
       setMovieForm({
         venueId: '',
@@ -276,7 +280,7 @@ const SmartScheduler = ({ owner }) => {
       });
     } catch (err) {
       console.error('Error calling schedule API:', err);
-      alert('Unexpected error while creating schedule. See console for details.');
+      toast.error('Unexpected error while creating schedule. See console for details.');
     }
   };
 
@@ -284,6 +288,46 @@ const SmartScheduler = ({ owner }) => {
   const handleEventInputChange = (e) => {
     const { name, value } = e.target;
     setEventForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEventImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      setEventImageFile(file);
+      setEventImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const uploadEventImage = async () => {
+    if (!eventImageFile) return null;
+
+    setUploadingEventImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', eventImageFile);
+
+      const response = await fetch('http://localhost:8080/api/upload/event', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      return `http://localhost:8080${data.imageUrl}`;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+      return null;
+    } finally {
+      setUploadingEventImage(false);
+    }
   };
 
   // Date management for events
@@ -344,25 +388,35 @@ const SmartScheduler = ({ owner }) => {
     e.preventDefault();
     
     if (!owner?.id) {
-      alert('Owner information is missing. Please refresh and try again.');
+      toast.error('Owner information is missing. Please refresh and try again.');
       return;
     }
 
     if (eventForm.dates.length === 0) {
-      alert('Please add at least one date for the event.');
+      toast.error('Please add at least one date for the event.');
       return;
     }
 
     if (eventForm.zones.length === 0) {
-      alert('Please add at least one zone for the event.');
+      toast.error('Please add at least one zone for the event.');
       return;
     }
 
     try {
+      // Upload image first if file is selected
+      let uploadedImageUrl = eventForm.imageUrl;
+      if (eventImageFile) {
+        uploadedImageUrl = await uploadEventImage();
+        if (!uploadedImageUrl) {
+          toast.error('Failed to upload event image');
+          return;
+        }
+      }
+
       // Get venue to get address if not provided
       const selectedVenue = eventVenues.find(v => v.id === Number(eventForm.venueId));
       if (!selectedVenue) {
-        alert('Please select a valid venue.');
+        toast.error('Please select a valid venue.');
         return;
       }
 
@@ -405,7 +459,7 @@ const SmartScheduler = ({ owner }) => {
           venueId: Number(eventForm.venueId),
           title: eventForm.eventName,
           description: eventForm.artist || eventForm.description || '',
-          posterUrl: eventForm.imageUrl || '',
+          posterUrl: uploadedImageUrl || '',
           address: eventForm.address || selectedVenue.address || selectedVenue.location || '',
           eventConfig: JSON.stringify(eventConfig)
         })
@@ -414,14 +468,16 @@ const SmartScheduler = ({ owner }) => {
       if (!response.ok) {
         const text = await response.text();
         console.error('Failed to create event:', text);
-        alert('Failed to create event. Please check backend logs.');
+        toast.error('Failed to create event. Please check backend logs.');
         return;
       }
 
       const data = await response.json();
-      alert(`Event "${eventForm.eventName}" created successfully!`);
+      toast.success(`Event "${eventForm.eventName}" created successfully!`);
       
-      // Reset form
+      // Reset form and image states
+      setEventImageFile(null);
+      setEventImagePreview(null);
       setEventForm({
         venueId: '',
         eventName: '',
@@ -434,7 +490,7 @@ const SmartScheduler = ({ owner }) => {
       });
     } catch (err) {
       console.error('Error creating event:', err);
-      alert('Unexpected error while creating event. See console for details.');
+      toast.error('Unexpected error while creating event. See console for details.');
     }
   };
 
@@ -845,28 +901,73 @@ const SmartScheduler = ({ owner }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Event Image URL</label>
-                <input
-                  type="url"
-                  name="imageUrl"
-                  value={eventForm.imageUrl}
-                  onChange={handleEventInputChange}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Address</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={eventForm.address}
-                  onChange={handleEventInputChange}
-                  placeholder="Event address (optional)"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                />
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Event Image</label>
+              <div className="grid grid-cols-1 gap-4">
+                {/* Image Upload */}
+                <div className="flex items-center gap-4">
+                  <label className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-dashed border-violet-300 rounded-lg hover:border-violet-500 transition-all">
+                      <Upload className="w-5 h-5 text-violet-600" />
+                      <span className="text-sm font-medium text-violet-700">
+                        {eventImageFile ? eventImageFile.name : 'Choose event poster'}
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEventImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {eventImagePreview && (
+                    <div className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-violet-200">
+                      <img 
+                        src={eventImagePreview} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEventImageFile(null);
+                          setEventImagePreview(null);
+                        }}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Alternative: Image URL */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <input
+                      type="url"
+                      name="imageUrl"
+                      value={eventForm.imageUrl}
+                      onChange={handleEventInputChange}
+                      placeholder="Or paste image URL (https://...)"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                      disabled={!!eventImageFile}
+                    />
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Address</label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={eventForm.address}
+                    onChange={handleEventInputChange}
+                    placeholder="Event address (optional)"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
 

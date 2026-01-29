@@ -18,15 +18,15 @@ const EventBookingLayout = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-cinema-light flex flex-col lg:flex-row"
+      className="min-h-screen bg-cinema-light flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden"
     >
-      {/* Left Sidebar - 30% */}
-      <div className="w-full lg:w-[30%] lg:min-w-[320px] lg:max-w-[400px]">
+      {/* Left Sidebar - Static */}
+      <div className="w-full lg:w-[30%] lg:min-w-[320px] lg:max-w-[400px] lg:overflow-y-auto">
         <EventSidebar event={selectedEvent} onBack={onBack} />
       </div>
 
-      {/* Right Panel - 70% */}
-      <div className="flex-1 w-full bg-cinema-light">
+      {/* Right Panel - Scrollable */}
+      <div className="flex-1 w-full bg-cinema-light lg:overflow-y-auto">
         <EventBookingWizard
           currentStep={currentStep}
           bookingDetails={bookingDetails}

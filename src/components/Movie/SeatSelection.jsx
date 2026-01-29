@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // Row configuration with pricing categories
 // A–D: Silver, E–K: Gold, L–M: VIP
@@ -21,11 +21,39 @@ const ROW_DEFS = [
 
 const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) => {
   const [selectedSeats, setSelectedSeats] = useState(initialSelectedSeats);
+  const [blockedSeats, setBlockedSeats] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState(1); // 1 = 100%
 
   const MIN_ZOOM = 0.5;
   const MAX_ZOOM = 1.6;
   const ZOOM_STEP = 0.15;
+
+  // Fetch blocked seats for this show
+  useEffect(() => {
+    const fetchBlockedSeats = async () => {
+      if (!selectedShow?.showId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/bookings/show/${selectedShow.showId}/blocked-seats`
+        );
+        if (response.ok) {
+          const seats = await response.json();
+          setBlockedSeats(seats || []);
+        }
+      } catch (error) {
+        console.error('Error fetching blocked seats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBlockedSeats();
+  }, [selectedShow?.showId]);
 
   // Generate a simple seat map without external mock data.
   const seats = useMemo(() => {
@@ -33,17 +61,18 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
     ROW_DEFS.forEach(row => {
       const seatCount = row.type === 'vip' ? 12 : 14;
       for (let i = 1; i <= seatCount; i++) {
+        const seatId = `${row.id}${i}`;
         all.push({
-          id: `${row.id}${i}`,
+          id: seatId,
           row: row.id,
           number: i,
           type: row.type,
-          taken: false
+          taken: blockedSeats.includes(seatId)
         });
       }
     });
     return all;
-  }, []);
+  }, [blockedSeats]);
 
   const toggleSeat = (seatId, isTaken) => {
     if (isTaken) return;
@@ -58,12 +87,15 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
   const getSeatsByRow = (rowId) => {
     return seats.filter(seat => seat.row === rowId);
   };
-  // Owner-configured prices: standard covers Silver & Gold; VIP for VIP rows
-  const standardPrice = Number(
-    selectedShow?.standardPrice ?? selectedShow?.price ?? 0
+  // Owner-configured prices: Silver, Gold, and VIP
+  const silverPrice = Number(
+    selectedShow?.silverPrice ?? selectedShow?.price ?? 0
+  );
+  const goldPrice = Number(
+    selectedShow?.goldPrice ?? selectedShow?.price ?? silverPrice
   );
   const vipPrice = Number(
-    selectedShow?.vipPrice ?? selectedShow?.price ?? standardPrice
+    selectedShow?.vipPrice ?? selectedShow?.price ?? goldPrice
   );
 
   const totalPrice = useMemo(() => {
@@ -72,11 +104,25 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
       if (!seat) return sum;
       if (seat.type === 'vip') {
         return sum + vipPrice;
+      } else if (seat.type === 'gold') {
+        return sum + goldPrice;
+      } else {
+        // silver
+        return sum + silverPrice;
       }
-      // silver & gold share the standard price from owner config
-      return sum + standardPrice;
     }, 0);
-  }, [selectedSeats, seats, standardPrice, vipPrice]);
+  }, [selectedSeats, seats, silverPrice, goldPrice, vipPrice]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-slate-600 font-medium">Loading seat availability...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-24">
@@ -201,14 +247,14 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
                 <div className="w-10 h-10 bg-slate-200 border border-blue-400 rounded flex items-center justify-center text-slate-700 text-xs font-medium">
                   D5
                 </div>
-                <span className="text-slate-600">Silver (₹{standardPrice})</span>
+                <span className="text-slate-600">Silver (₹{silverPrice})</span>
               </div>
               {/* Gold */}
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-slate-200 border border-yellow-400 rounded flex items-center justify-center text-yellow-800 text-xs font-medium">
                   H5
                 </div>
-                <span className="text-slate-600">Gold (₹{standardPrice})</span>
+                <span className="text-slate-600">Gold (₹{goldPrice})</span>
               </div>
               {/* VIP */}
               <div className="flex items-center gap-2">

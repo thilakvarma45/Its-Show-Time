@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Ticket, Clapperboard, Mail, Lock, User, Sparkles } from 'lucide-react';
+import { Ticket, Clapperboard, Mail, Lock, User, Film, Eye, EyeOff, CheckCircle } from 'lucide-react';
 
 /**
  * Register screen with role selector (user / owner).
@@ -11,6 +11,7 @@ const Register = ({ onAuthSuccess }) => {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -51,16 +52,12 @@ const Register = ({ onAuthSuccess }) => {
 
       const user = await res.json();
 
-      // For owners, briefly show success message, then let parent route decide navigation
-      if (role === 'owner') {
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-          onAuthSuccess(user);
-        }, 1500);
-      } else {
+      // Show success message briefly
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
         onAuthSuccess(user);
-      }
+      }, 1500);
     } catch (err) {
       console.error(err);
       setError(err.message || 'Registration failed');
@@ -70,200 +67,292 @@ const Register = ({ onAuthSuccess }) => {
   };
 
   const isUser = role === 'user';
+  
+  // Dynamic colors based on role
+  const focusColor = isUser ? 'orange' : 'purple';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 relative overflow-hidden">
-      {/* Background */}
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-50 relative overflow-hidden">
+      {/* Background Decorations */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
-          className="absolute top-0 left-1/4 w-96 h-96 bg-amber-100/50 rounded-full blur-3xl"
-          animate={{ x: [0, 100, 0], y: [0, 50, 0], scale: [1, 1.2, 1] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute top-20 left-10 w-72 h-72 bg-orange-200/30 rounded-full blur-3xl"
+          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-100/50 rounded-full blur-3xl"
-          animate={{ x: [0, -100, 0], y: [0, -50, 0], scale: [1, 1.2, 1] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+          className="absolute bottom-20 right-10 w-96 h-96 bg-purple-200/30 rounded-full blur-3xl"
+          animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 py-8">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
           className="w-full max-w-md"
         >
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 md:p-10">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-6 md:p-7">
             {/* Header */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-5">
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="flex items-center justify-center gap-2 mb-4"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', delay: 0.2 }}
+                className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-2xl mb-3 shadow-lg"
               >
-                <Sparkles className={`w-8 h-8 ${isUser ? 'text-amber-500' : 'text-violet-600'}`} />
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent uppercase tracking-widest">
-                  Its Show Time
-                </h1>
+                <Film className="w-7 h-7 text-white" />
               </motion.div>
-
-              <AnimatePresence mode="wait">
-                <motion.h2
-                  key="register-title"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className={`text-xl font-semibold ${isUser ? 'text-amber-600' : 'text-violet-600'} uppercase tracking-wider`}
-                >
-                  Create your account
-                </motion.h2>
-              </AnimatePresence>
+              
+              <motion.h1
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-3xl font-black mb-1 text-slate-900"
+              >
+                ITS SHOW TIME
+              </motion.h1>
+              
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-slate-600 text-xs"
+              >
+                Create your account to get started
+              </motion.p>
             </div>
 
             {/* Role Selector */}
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="mb-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mb-4"
             >
-              <label className="block text-slate-600 text-sm mb-3 uppercase tracking-wider text-center font-semibold">
-                Choose Your Role
+              <label className="block text-slate-700 text-xs font-medium mb-2 text-center">
+                I want to join as
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {/* User */}
-                <button
+                <motion.button
                   type="button"
                   onClick={() => setRole('user')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`relative p-3 rounded-lg border-2 transition-all ${
                     isUser
-                      ? 'border-amber-400 bg-amber-50 shadow-lg shadow-amber-500/20'
-                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                      ? 'border-orange-400 bg-orange-50 shadow-md'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <Ticket className={`w-6 h-6 mx-auto mb-2 ${isUser ? 'text-amber-600' : 'text-slate-400'}`} />
-                  <div className={`text-xs font-semibold uppercase tracking-wider ${isUser ? 'text-amber-700' : 'text-slate-600'}`}>
-                    The Audience
+                  {isUser && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-1.5 right-1.5"
+                    >
+                      <CheckCircle className="w-4 h-4 text-orange-500 fill-orange-50" />
+                    </motion.div>
+                  )}
+                  <Ticket className={`w-6 h-6 mx-auto mb-1.5 ${isUser ? 'text-orange-500' : 'text-slate-400'}`} />
+                  <div className={`text-xs font-bold ${isUser ? 'text-orange-600' : 'text-slate-600'}`}>
+                    Movie Lover
                   </div>
-                  <div className={`text-[10px] mt-1 ${isUser ? 'text-amber-600' : 'text-slate-500'}`}>
-                    I want to watch
+                  <div className={`text-[10px] mt-0.5 ${isUser ? 'text-orange-500' : 'text-slate-500'}`}>
+                    Book tickets
                   </div>
-                </button>
+                </motion.button>
 
                 {/* Owner */}
-                <button
+                <motion.button
                   type="button"
                   onClick={() => setRole('owner')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`relative p-3 rounded-lg border-2 transition-all ${
                     !isUser
-                      ? 'border-violet-400 bg-violet-50 shadow-lg shadow-violet-500/20'
-                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                      ? 'border-purple-400 bg-purple-50 shadow-md'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <Clapperboard className={`w-6 h-6 mx-auto mb-2 ${!isUser ? 'text-violet-600' : 'text-slate-400'}`} />
-                  <div className={`text-xs font-semibold uppercase tracking-wider ${!isUser ? 'text-violet-700' : 'text-slate-600'}`}>
-                    The Producer
+                  {!isUser && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-1.5 right-1.5"
+                    >
+                      <CheckCircle className="w-4 h-4 text-purple-500 fill-purple-50" />
+                    </motion.div>
+                  )}
+                  <Clapperboard className={`w-6 h-6 mx-auto mb-1.5 ${!isUser ? 'text-purple-500' : 'text-slate-400'}`} />
+                  <div className={`text-xs font-bold ${!isUser ? 'text-purple-600' : 'text-slate-600'}`}>
+                    Venue Owner
                   </div>
-                  <div className={`text-[10px] mt-1 ${!isUser ? 'text-violet-600' : 'text-slate-500'}`}>
-                    I want to host
+                  <div className={`text-[10px] mt-0.5 ${!isUser ? 'text-purple-500' : 'text-slate-500'}`}>
+                    Manage venues
                   </div>
-                </button>
+                </motion.button>
               </div>
             </motion.div>
 
-            {/* Success for owner */}
+            {/* Success Message */}
             <AnimatePresence>
               {showSuccess && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg text-center"
                 >
-                  <div className="text-emerald-700 font-semibold uppercase tracking-wider text-sm">
-                    Owner Registered!
+                  <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-1.5" />
+                  <div className="text-green-700 font-bold">
+                    Account Created!
                   </div>
-                  <div className="text-emerald-600 text-xs mt-1">
-                    Redirecting to your console...
+                  <div className="text-green-600 text-xs mt-0.5">
+                    Redirecting you now...
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               {/* Name */}
-              <div className="relative">
-                <User className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-500' : 'text-violet-500'}`} />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Full Name"
-                  required
-                  className={`w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${
-                    isUser ? 'focus:ring-amber-500 focus:border-amber-500' : 'focus:ring-violet-500 focus:border-violet-500'
-                  } transition-colors`}
-                />
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Enter your full name"
+                    required
+                    className={`w-full pl-10 pr-3 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
+                      isUser 
+                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10' 
+                        : 'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10'
+                    }`}
+                  />
+                </div>
               </div>
 
               {/* Email */}
-              <div className="relative">
-                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-500' : 'text-violet-500'}`} />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Email Address"
-                  required
-                  className={`w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${
-                    isUser ? 'focus:ring-amber-500 focus:border-amber-500' : 'focus:ring-violet-500 focus:border-violet-500'
-                  } transition-colors`}
-                />
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Enter your email"
+                    required
+                    className={`w-full pl-10 pr-3 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
+                      isUser 
+                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10' 
+                        : 'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10'
+                    }`}
+                  />
+                </div>
               </div>
 
               {/* Password */}
-              <div className="relative">
-                <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isUser ? 'text-amber-500' : 'text-violet-500'}`} />
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Password"
-                  required
-                  minLength={6}
-                  className={`w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${
-                    isUser ? 'focus:ring-amber-500 focus:border-amber-500' : 'focus:ring-violet-500 focus:border-violet-500'
-                  } transition-colors`}
-                />
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Min 6 characters"
+                    required
+                    minLength={6}
+                    className={`w-full pl-10 pr-10 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
+                      isUser 
+                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10' 
+                        : 'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 text-center"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              {/* Submit Button */}
               <motion.button
                 type="submit"
                 disabled={submitting}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className={`w-full py-4 bg-gradient-to-r ${
-                  isUser
-                    ? 'from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/30'
-                    : 'from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-lg shadow-violet-500/30'
-                } text-white rounded-xl font-semibold uppercase tracking-wider transition-all transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed`}
+                whileHover={{ scale: submitting ? 1 : 1.02 }}
+                whileTap={{ scale: submitting ? 1 : 0.98 }}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-lg font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                {submitting ? 'Creating account...' : isUser ? 'Register' : 'Open Box Office'}
+                {submitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Creating account...
+                  </span>
+                ) : (
+                  'Create Account'
+                )}
               </motion.button>
             </form>
 
-            {error && (
-              <div className="mt-4 text-center text-sm text-red-600">
-                {error}
-              </div>
-            )}
+            {/* Login Link */}
+            <div className="mt-5 text-center">
+              <p className="text-slate-600 text-sm">
+                Already have an account?{' '}
+                <a
+                  href="/login"
+                  className="font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Login here
+                </a>
+              </p>
+            </div>
           </div>
+
+          {/* Footer Note */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="text-center text-slate-500 text-xs mt-3"
+          >
+            By signing up, you agree to our Terms & Privacy Policy
+          </motion.p>
         </motion.div>
       </div>
     </div>
