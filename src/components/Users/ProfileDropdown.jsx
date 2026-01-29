@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Settings, LogOut, Bookmark, Heart, ChevronDown } from 'lucide-react';
+import { User, Settings, LogOut, Bookmark, Heart, ChevronDown, HelpCircle, MessageCircle } from 'lucide-react';
 
 const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,10 +22,13 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
     { icon: Settings, label: 'Settings', action: 'settings', roles: ['user', 'owner'] },
     { icon: Bookmark, label: 'My Bookings', action: 'bookings', roles: ['user'] },
     { icon: Heart, label: 'Wishlist', action: 'wishlist', roles: ['user'] },
+    { type: 'divider', roles: ['user', 'owner'] },
+    { icon: HelpCircle, label: 'Help & Support', action: 'help-support', roles: ['user', 'owner'] },
+    { type: 'divider', roles: ['user', 'owner'] },
     { icon: LogOut, label: 'Logout', action: 'logout', isDanger: true, roles: ['user', 'owner'] },
   ];
 
-  const menuItems = allMenuItems.filter(item => 
+  const menuItems = allMenuItems.filter(item =>
     item.roles.includes(user?.role === 'owner' ? 'owner' : 'user')
   );
 
@@ -42,7 +45,7 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
   const getInitials = (name) => {
     if (!name) return 'U';
     const names = name.split(' ');
-    return names.length > 1 
+    return names.length > 1
       ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
       : names[0][0].toUpperCase();
   };
@@ -73,10 +76,9 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
         </div>
 
         {/* Chevron Icon */}
-        <ChevronDown 
-          className={`w-4 h-4 text-slate-500 transition-transform duration-200 hidden md:block ${
-            isOpen ? 'rotate-180' : ''
-          }`}
+        <ChevronDown
+          className={`w-4 h-4 text-slate-500 transition-transform duration-200 hidden md:block ${isOpen ? 'rotate-180' : ''
+            }`}
         />
       </button>
 
@@ -108,18 +110,21 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
             {/* Menu Items */}
             <div className="py-2">
               {menuItems.map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleItemClick(item.action)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${
-                    item.isDanger
+                item.type === 'divider' ? (
+                  <div key={index} className="my-2 mx-4 border-t border-slate-200" />
+                ) : (
+                  <button
+                    key={index}
+                    onClick={() => handleItemClick(item.action)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${item.isDanger
                       ? 'text-rose-600 hover:bg-rose-50'
                       : 'text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-sm font-semibold">{item.label}</span>
-                </button>
+                      }`}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="text-sm font-semibold">{item.label}</span>
+                  </button>
+                )
               ))}
             </div>
           </motion.div>

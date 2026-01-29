@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Film, 
-  Calendar, 
-  Ticket, 
-  Search, 
-  Shield, 
-  Clock, 
+import {
+  Film,
+  Calendar,
+  Ticket,
+  Search,
+  Shield,
+  Clock,
   Star,
   Users,
   BarChart3,
@@ -142,7 +142,7 @@ const LandingPage = () => {
             >
               <Video className="w-12 h-12 text-white" />
             </motion.div>
-            
+
             <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black text-slate-900 mb-6 leading-tight">
               Your Cinema
               <br />
@@ -150,7 +150,7 @@ const LandingPage = () => {
                 Experience
               </span>
             </h1>
-            
+
             <p className="text-xl sm:text-2xl text-slate-600 mb-12 max-w-2xl mx-auto font-light">
               Book movies and events. For movie lovers and venue owners.
             </p>
@@ -221,9 +221,8 @@ const LandingPage = () => {
                 onMouseLeave={() => setHoveredFeature(null)}
                 className="bg-white p-8 rounded-2xl border border-slate-200 hover:border-transparent hover:shadow-xl transition-all cursor-pointer group"
               >
-                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-all bg-gradient-to-br ${feature.color} ${
-                  hoveredFeature === `user-${index}` ? 'scale-110 rotate-3' : ''
-                }`}>
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-all bg-gradient-to-br ${feature.color} ${hoveredFeature === `user-${index}` ? 'scale-110 rotate-3' : ''
+                  }`}>
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-3">{feature.title}</h3>
@@ -263,9 +262,8 @@ const LandingPage = () => {
                 onMouseLeave={() => setHoveredFeature(null)}
                 className="bg-white p-8 rounded-2xl border border-slate-200 hover:border-transparent hover:shadow-xl transition-all cursor-pointer group"
               >
-                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-all bg-gradient-to-br ${feature.color} ${
-                  hoveredFeature === `owner-${index}` ? 'scale-110 rotate-3' : ''
-                }`}>
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 transition-all bg-gradient-to-br ${feature.color} ${hoveredFeature === `owner-${index}` ? 'scale-110 rotate-3' : ''
+                  }`}>
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-3">{feature.title}</h3>
@@ -399,7 +397,7 @@ const LandingPage = () => {
               <span className="text-lg font-bold text-white">Show Time</span>
             </div>
             <p className="text-white/70 text-sm font-light">
-              © 2024 Show Time. All rights reserved.
+              © 2026 Show Time. All rights reserved.
             </p>
           </div>
         </div>

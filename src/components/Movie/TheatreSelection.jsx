@@ -114,8 +114,8 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
               key={date.id}
               onClick={() => setSelectedDate(date.id)}
               className={`flex-shrink-0 px-6 py-3 rounded-lg border-2 transition-all ${selectedDate === date.id
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'bg-transparent border-slate-300 text-slate-600 hover:border-blue-500'
+                ? 'bg-blue-600 border-blue-600 text-white'
+                : 'bg-transparent border-slate-300 text-slate-600 hover:border-blue-500'
                 }`}
             >
               <div className="text-sm font-semibold">{date.day}</div>

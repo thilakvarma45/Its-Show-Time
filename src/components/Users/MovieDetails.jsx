@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Star, 
-  Clock, 
-  Calendar, 
+import {
+  ArrowLeft,
+  Star,
+  Clock,
+  Calendar,
   Users,
   Film,
   Loader2,
   ChevronRight,
   Image as ImageIcon
 } from 'lucide-react';
-import { getMovieById } from '../../services/tmdb';
+import { getMovieById, getMovieRecommendations } from '../../services/tmdb';
 
 const MovieDetails = ({ onBookNow }) => {
   const { id } = useParams();
@@ -117,7 +117,7 @@ const MovieDetails = ({ onBookNow }) => {
     if (!amount || amount === 0) return 'N/A';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
@@ -126,28 +126,27 @@ const MovieDetails = ({ onBookNow }) => {
   return (
     <div className="min-h-screen bg-white">
       {/* Backdrop Hero Section */}
-      <div className={`relative ${movie.backdrop ? 'h-[60vh] min-h-[500px]' : 'h-auto pt-24 pb-12 bg-gradient-to-br from-slate-50 to-white'} overflow-hidden`}>
+      <div className={`relative mx-2.5 rounded-lg ${movie.backdrop ? 'h-[60vh] min-h-[500px]' : 'h-auto pt-24 pb-12 bg-gradient-to-br from-slate-50 to-white'} overflow-hidden`}>
         {movie.backdrop ? (
           <>
-            <div 
+            <div
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url(${movie.backdrop})` }}
             >
-              <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-white" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-transparent" />
             </div>
           </>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white" />
         )}
-        
+
         {/* Back Button */}
         <button
           onClick={() => navigate('/home')}
-          className={`absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-sm transition-all ${
-            movie.backdrop 
-              ? 'bg-black/50 hover:bg-black/70 text-white' 
-              : 'bg-white/90 hover:bg-white text-slate-900 border border-slate-200'
-          }`}
+          className={`absolute top-6 left-6 z-20 flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-sm transition-all ${movie.backdrop
+            ? 'bg-black/50 hover:bg-black/70 text-white'
+            : 'bg-white/90 hover:bg-white text-slate-900 border border-slate-200'
+            }`}
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="font-medium">Back</span>
@@ -223,11 +222,10 @@ const MovieDetails = ({ onBookNow }) => {
                   {movie.genre && movie.genre.map((genre, index) => (
                     <span
                       key={index}
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        movie.backdrop 
-                          ? 'bg-white/20 backdrop-blur-sm border border-white/30 text-white'
-                          : 'bg-blue-100 border border-blue-200 text-blue-700'
-                      }`}
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${movie.backdrop
+                        ? 'bg-white/20 backdrop-blur-sm border border-white/30 text-white'
+                        : 'bg-blue-100 border border-blue-200 text-blue-700'
+                        }`}
                     >
                       {genre}
                     </span>
@@ -439,6 +437,48 @@ const MovieDetails = ({ onBookNow }) => {
             </motion.div>
           </div>
         </div>
+
+        {/* Recommendations Section */}
+        {recommendations.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mt-12"
+          >
+            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <Film className="w-6 h-6" />
+              You Might Also Like
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {recommendations.map((rec) => (
+                <div
+                  key={rec.id}
+                  onClick={() => navigate(`/movie/${rec.id}`)}
+                  className="group cursor-pointer"
+                >
+                  <div className="relative overflow-hidden rounded-lg bg-slate-200 shadow-md hover:shadow-xl transition-all">
+                    <img
+                      src={rec.poster}
+                      alt={rec.title}
+                      className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                        <span className="text-white text-xs font-medium">{rec.rating}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className="mt-2 text-sm font-semibold text-slate-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                    {rec.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{rec.genre?.slice(0, 2).join(', ')}</p>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
       </div>
 
       {/* Image Modal */}

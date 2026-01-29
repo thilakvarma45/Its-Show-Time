@@ -60,33 +60,33 @@ export const DATES = [
 ];
 
 export const THEATRES = [
-  { 
-    id: 1, 
-    name: "PVR ICON", 
+  {
+    id: 1,
+    name: "PVR ICON",
     location: "Downtown",
     times: ["09:30 AM", "12:45 PM", "03:30 PM", "05:00 PM", "08:15 PM"],
-    price: 15
+    price: 250
   },
-  { 
-    id: 2, 
-    name: "INOX Laserplex", 
+  {
+    id: 2,
+    name: "INOX Laserplex",
     location: "North Side",
     times: ["10:00 AM", "01:00 PM", "04:15 PM", "07:30 PM", "10:00 PM"],
-    price: 18
+    price: 300
   },
-  { 
-    id: 3, 
-    name: "Cinepolis VIP", 
+  {
+    id: 3,
+    name: "Cinepolis VIP",
     location: "City Center",
     times: ["11:00 AM", "02:15 PM", "05:45 PM", "09:00 PM"],
-    price: 22
+    price: 350
   },
-  { 
-    id: 4, 
-    name: "PVR Superplex", 
+  {
+    id: 4,
+    name: "PVR Superplex",
     location: "Mall Road",
     times: ["09:00 AM", "12:00 PM", "03:00 PM", "06:00 PM", "09:30 PM"],
-    price: 16
+    price: 280
   },
 ];
 
@@ -105,6 +105,7 @@ export const SEAT_ROWS = [
   { id: 'K', type: 'standard', label: 'K' },
   { id: 'L', type: 'vip', label: 'L - VIP' },
   { id: 'M', type: 'vip', label: 'M - VIP' },
+  { id: 'N', type: 'vip', label: 'N - VIP' },
 ];
 
 // Generate seat map with some taken seats
@@ -118,7 +119,7 @@ export const generateSeats = () => {
     'J3', 'J7', 'J12', 'K1', 'K5', 'K10', 'K14', 'L2', 'L6', 'L9',
     'M3', 'M7', 'M12'
   ];
-  
+
   SEAT_ROWS.forEach(row => {
     const seatsInRow = row.type === 'vip' ? 12 : 14; // More seats per row
     for (let i = 1; i <= seatsInRow; i++) {
@@ -132,7 +133,7 @@ export const generateSeats = () => {
       });
     }
   });
-  
+
   return seats;
 };
 

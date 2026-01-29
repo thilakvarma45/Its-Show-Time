@@ -18,6 +18,18 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setError(''); // Clear error on input change
+  };
+
+  // Simple hash function for password (for demo purposes - use proper hashing in production)
+  const hashPassword = (password) => {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+      const char = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString();
   };
 
   const handleSubmit = async (e) => {
@@ -75,6 +87,13 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
           const user = await res.json();
           onAuthSuccess(user);
         }
+        // Login successful as user
+        onAuthSuccess({
+          email: user.email,
+          name: user.name,
+          role: 'user'
+        });
+        return;
       }
     } catch (err) {
       console.error(err);
@@ -143,7 +162,7 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                   Its Show Time
                 </h1>
               </motion.div>
-              
+
               <AnimatePresence mode="wait">
                 <motion.h2
                   key={isLogin ? 'login' : 'register'}
@@ -173,11 +192,10 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                   <button
                     type="button"
                     onClick={() => setRole('user')}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      isUser
-                        ? 'border-amber-400 bg-amber-50 shadow-lg shadow-amber-500/20'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                    }`}
+                    className={`p-4 rounded-xl border-2 transition-all ${isUser
+                      ? 'border-amber-400 bg-amber-50 shadow-lg shadow-amber-500/20'
+                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                      }`}
                   >
                     <Ticket className={`w-6 h-6 mx-auto mb-2 ${isUser ? 'text-amber-600' : 'text-slate-400'}`} />
                     <div className={`text-xs font-semibold uppercase tracking-wider ${isUser ? 'text-amber-700' : 'text-slate-600'}`}>
@@ -192,11 +210,10 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                   <button
                     type="button"
                     onClick={() => setRole('owner')}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      !isUser
-                        ? 'border-violet-400 bg-violet-50 shadow-lg shadow-violet-500/20'
-                        : 'border-slate-200 bg-slate-50 hover:border-slate-300'
-                    }`}
+                    className={`p-4 rounded-xl border-2 transition-all ${!isUser
+                      ? 'border-violet-400 bg-violet-50 shadow-lg shadow-violet-500/20'
+                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                      }`}
                   >
                     <Clapperboard className={`w-6 h-6 mx-auto mb-2 ${!isUser ? 'text-violet-600' : 'text-slate-400'}`} />
                     <div className={`text-xs font-semibold uppercase tracking-wider ${!isUser ? 'text-violet-700' : 'text-slate-600'}`}>
@@ -223,7 +240,23 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                     Owner Registered!
                   </div>
                   <div className="text-emerald-600 text-xs mt-1">
-                    Please log in to access your console.
+                    Please log in to access your Dashboard.
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Error Message */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-center"
+                >
+                  <div className="text-rose-700 font-semibold text-sm">
+                    {error}
                   </div>
                 </motion.div>
               )}
