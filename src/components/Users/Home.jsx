@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Calendar, SlidersHorizontal, Loader2, Heart, ChevronLeft, ChevronRight, Play, TrendingUp, Film } from 'lucide-react';
-import { EVENTS } from '../../data/mockData';
-import { fetchPopularMovies, searchMovies, fetchTrendingMovies, fetchNowPlayingMovies } from '../../services/tmdb';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Star, Calendar, Search, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
 
 const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishlist, searchQuery = '', setSearchQuery }) => {
   const [sortBy, setSortBy] = useState('name'); // 'name', 'rating', 'latest'
   const [filterType, setFilterType] = useState('all'); // 'all', 'movies', 'events'
   const [movies, setMovies] = useState([]);
+  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -55,45 +55,37 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
     return () => clearTimeout(timeoutId);
   }, [searchQuery, filterType]);
 
-  // Fetch trending and recommended movies on mount
+  // Load events from backend once
   useEffect(() => {
-    const loadTrendingAndRecommendations = async () => {
+    const loadEvents = async () => {
       try {
-        const [trending, nowPlaying] = await Promise.all([
-          fetchTrendingMovies(),
-          fetchNowPlayingMovies()
-        ]);
-        setTrendingMovies(trending);
-        setRecommendedMovies(nowPlaying);
+        const res = await fetch('http://localhost:8080/api/events');
+        if (!res.ok) {
+          throw new Error('Failed to load events');
+        }
+        const data = await res.json();
+        // Basic summary; full dates/zones will be fetched on selection
+        const normalized = data.map(e => ({
+          id: e.id,
+          type: 'event',
+          title: e.title,
+          poster: e.posterUrl,
+          venue: e.venue?.name || e.address || 'Event venue',
+          address: e.address,
+        }));
+        setEvents(normalized);
       } catch (err) {
-        console.error('Error loading trending/recommendations:', err);
+        console.error('Error loading events:', err);
+        setEvents([]);
       }
     };
-    loadTrendingAndRecommendations();
+    loadEvents();
   }, []);
-
-  // Auto-slide for banner
-  useEffect(() => {
-    if (trendingMovies.length === 0) return;
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % trendingMovies.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [trendingMovies.length]);
-
-  // Slide navigation
-  const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev + 1) % trendingMovies.length);
-  }, [trendingMovies.length]);
-
-  const prevSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev - 1 + trendingMovies.length) % trendingMovies.length);
-  }, [trendingMovies.length]);
 
   // Combine and filter items
   const allItems = [
     ...movies.map(m => ({ ...m, type: 'movie' })),
-    ...EVENTS.map(e => ({ ...e, type: 'event' }))
+    ...events
   ];
 
   const filteredItems = allItems

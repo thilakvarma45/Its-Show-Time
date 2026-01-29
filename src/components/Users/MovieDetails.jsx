@@ -21,7 +21,7 @@ const MovieDetails = ({ onBookNow }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
+  const [hasShows, setHasShows] = useState(false);
 
   useEffect(() => {
     const loadMovie = async () => {
@@ -43,22 +43,35 @@ const MovieDetails = ({ onBookNow }) => {
     }
   }, [id]);
 
-  // Fetch recommendations when movie loads
+  // Check if there are any shows scheduled for THIS specific movie
   useEffect(() => {
-    const loadRecommendations = async () => {
-      if (movie?.id) {
-        try {
-          const recs = await getMovieRecommendations(movie.id);
-          setRecommendations(recs);
-        } catch (err) {
-          console.error('Error loading recommendations:', err);
+    const checkMovieShows = async () => {
+      if (!movie || !movie.id) return;
+      
+      try {
+        // Check if this movie has any shows scheduled
+        const res = await fetch('http://localhost:8080/api/shows/summary');
+        if (!res.ok) {
+          throw new Error('Failed to load shows');
         }
+        const summaries = await res.json();
+        // Check if this movie (tmdbMovieId) has any shows
+        const movieHasShows = summaries.some(
+          (summary) => summary.tmdbMovieId === movie.id
+        );
+        setHasShows(movieHasShows);
+      } catch (e) {
+        console.error('Error checking movie shows:', e);
+        // On error, allow booking to avoid blocking the user
+        setHasShows(true);
       }
     };
-    loadRecommendations();
-  }, [movie?.id]);
+    
+    checkMovieShows();
+  }, [movie]);
 
   const handleBookNow = () => {
+    if (!hasShows) return;
     if (movie && onBookNow) {
       onBookNow(movie);
       navigate('/booking/movie', { state: { movie } });
@@ -224,11 +237,16 @@ const MovieDetails = ({ onBookNow }) => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7 }}
                   onClick={handleBookNow}
-                  className="px-8 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold text-lg transition-all shadow-lg flex items-center gap-2"
+                  disabled={!hasShows}
+                  className={`px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg flex items-center gap-2 ${
+                    hasShows
+                      ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
                 >
                   <Film className="w-5 h-5" />
-                  Book Now
-                  <ChevronRight className="w-5 h-5" />
+                  {hasShows ? 'Book Now' : 'Not Available'}
+                  {hasShows && <ChevronRight className="w-5 h-5" />}
                 </motion.button>
               </div>
             </motion.div>
@@ -407,9 +425,14 @@ const MovieDetails = ({ onBookNow }) => {
 
               <button
                 onClick={handleBookNow}
-                className="w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold transition-all shadow-md"
+                disabled={!hasShows}
+                className={`w-full px-6 py-3 rounded-lg font-bold transition-all shadow-md ${
+                  hasShows
+                    ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                }`}
               >
-                Book Tickets
+                {hasShows ? 'Book Tickets' : 'Not Available'}
               </button>
             </motion.div>
           </div>

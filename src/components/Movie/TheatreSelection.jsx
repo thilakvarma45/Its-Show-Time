@@ -1,27 +1,98 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
-import { MapPin, Calendar, Search, Sun, CloudSun, Sunset, Moon } from 'lucide-react';
-import { THEATRES, DATES } from '../../data/mockData';
+import { useEffect, useState } from 'react';
+import { MapPin, Calendar, Search } from 'lucide-react';
 
-const TheatreSelection = ({ onTimeSelect, selectedShow }) => {
-  const [selectedDate, setSelectedDate] = useState(selectedShow?.date?.id || DATES[0].id);
+const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
+  const today = new Date();
+  // Show the next 14 days so the user can book as long as shows exist in that window.
+  const generatedDates = Array.from({ length: 14 }).map((_, idx) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + idx);
+    return {
+      id: idx + 1,
+      day: d.toLocaleDateString(undefined, { weekday: 'short' }),
+      date: d.getDate()
+    };
+  });
+
+  const [selectedDate, setSelectedDate] = useState(selectedShow?.date?.id || generatedDates[0].id);
   const [searchQuery, setSearchQuery] = useState('');
+  const [theatres, setTheatres] = useState([]);
 
-  const handleTimeClick = (theatre, time) => {
+  // Load all venues and then shows per venue for the selected date
+  useEffect(() => {
+    const loadTheatres = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/api/venues');
+        if (!res.ok) {
+          throw new Error('Failed to load venues');
+        }
+        const venues = await res.json();
+        const theatreVenues = venues.filter(
+          (v) => (v.type || '').toString().toUpperCase() === 'THEATRE'
+        );
+
+        const today = new Date();
+        const baseDate = new Date(today);
+        baseDate.setDate(today.getDate() + (selectedDate - 1));
+        const isoDate = baseDate.toISOString().split('T')[0];
+
+        const withShows = await Promise.all(
+          theatreVenues.map(async (venue) => {
+            try {
+              // Filter shows by movie ID if provided
+              const url = movieId 
+                ? `http://localhost:8080/api/shows/venue/${venue.id}?date=${isoDate}&movieId=${movieId}`
+                : `http://localhost:8080/api/shows/venue/${venue.id}?date=${isoDate}`;
+              
+              const showRes = await fetch(url);
+              if (!showRes.ok) {
+                return { ...venue, shows: [] };
+              }
+              const shows = await showRes.json();
+              return { ...venue, shows };
+            } catch {
+              return { ...venue, shows: [] };
+            }
+          })
+        );
+        setTheatres(withShows);
+      } catch (err) {
+        console.error('Error loading theatres/shows:', err);
+        setTheatres([]);
+      }
+    };
+    loadTheatres();
+  }, [selectedDate, movieId]);
+
+  const handleTimeClick = (theatre, show) => {
     onTimeSelect({
+      showId: show.id,
       theatreId: theatre.id,
       theatreName: theatre.name,
-      time: time,
-      price: theatre.price,
-      date: DATES.find(d => d.id === selectedDate)
+      time: show.time,
+      // pass both category prices from backend
+      standardPrice: show.standardPrice,
+      vipPrice: show.vipPrice,
+      // fallback single price for any older consumers
+      price: show.standardPrice || show.vipPrice || 0,
+      date: generatedDates.find((d) => d.id === selectedDate),
     });
   };
 
   // Filter theatres by search query
-  const filteredTheatres = THEATRES.filter(theatre =>
-    theatre.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    theatre.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTheatres = theatres
+    .map((theatre) => ({
+      ...theatre,
+      shows: Array.isArray(theatre.shows) ? theatre.shows : [],
+    }))
+    .filter((theatre) => {
+      const matchesSearch =
+        theatre.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        theatre.location.toLowerCase().includes(searchQuery.toLowerCase());
+      // Only keep theatres that match search AND have at least one show for this date
+      return matchesSearch && theatre.shows.length > 0;
+    });
 
   return (
     <div className="space-y-6">
@@ -38,7 +109,7 @@ const TheatreSelection = ({ onTimeSelect, selectedShow }) => {
           </h3>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {DATES.map((date) => (
+          {generatedDates.map((date) => (
             <button
               key={date.id}
               onClick={() => setSelectedDate(date.id)}
@@ -86,9 +157,13 @@ const TheatreSelection = ({ onTimeSelect, selectedShow }) => {
 
         {filteredTheatres.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
-            <div className="text-5xl mb-3">🎭</div>
-            <h4 className="text-lg font-semibold text-slate-800 mb-1">No theatres found</h4>
-            <p className="text-slate-600 text-sm">Try adjusting your search</p>
+            <div className="text-5xl mb-3">🎬</div>
+            <h4 className="text-lg font-semibold text-slate-800 mb-1">No shows available</h4>
+            <p className="text-slate-600 text-sm">
+              {movieId 
+                ? "This movie has not been scheduled at any theatre yet. Please check back later or try a different date."
+                : "There are currently no theatres with shows available for this date."}
+            </p>
           </div>
         ) : (
           filteredTheatres.map((theatre, index) => (
@@ -108,79 +183,35 @@ const TheatreSelection = ({ onTimeSelect, selectedShow }) => {
               </div>
 
               {/* Time Slots Grid */}
-              {/* Time Slots Grouped by Period */}
-              <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
-                {(() => {
-                  const getTimeCategory = (timeStr) => {
-                    const [time, period] = timeStr.split(' ');
-                    const [hours] = time.split(':').map(Number);
-                    let hour = hours;
-                    if (period === 'PM' && hour !== 12) hour += 12;
-                    if (period === 'AM' && hour === 12) hour = 0;
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                {theatre.shows.length === 0 ? (
+                  <div className="col-span-3 md:col-span-5 text-sm text-slate-500">
+                    No shows scheduled for this theatre on the selected date.
+                  </div>
+                ) : (
+                  theatre.shows.map((show) => {
+                  const isSelected =
+                    selectedShow?.theatreId === theatre.id &&
+                    selectedShow?.time === show.time &&
+                    selectedShow?.date?.id === selectedDate;
 
-                    if (hour < 12) return { key: 'Morning', icon: Sun, color: 'text-yellow-500', bg: 'bg-yellow-50' };
-                    if (hour < 17) return { key: 'Afternoon', icon: CloudSun, color: 'text-orange-500', bg: 'bg-orange-50' };
-                    if (hour < 20) return { key: 'Evening', icon: Sunset, color: 'text-rose-500', bg: 'bg-rose-50' };
-                    return { key: 'Night', icon: Moon, color: 'text-indigo-500', bg: 'bg-indigo-50' };
-                  };
-
-                  const formatTimeDisplay = (timeStr) => {
-                    const [time, period] = timeStr.split(' ');
-                    const [hours, minutes] = time.split(':');
-                    return `${parseInt(hours, 10)}:${minutes} ${period}`;
-                  };
-
-                  const groups = theatre.times.reduce((acc, time) => {
-                    const { key, icon, color, bg } = getTimeCategory(time);
-                    if (!acc[key]) acc[key] = { times: [], icon, color, bg };
-                    acc[key].times.push(time);
-                    return acc;
-                  }, {});
-
-                  const order = ['Morning', 'Afternoon', 'Evening', 'Night'];
-
-                  return order.map((period) => {
-                    if (!groups[period]) return null;
-                    const { icon: Icon, color, times, bg } = groups[period];
-
-                    return (
-                      <div key={period} className="flex flex-col gap-3 min-w-fit">
-                        <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${color}`}>
-                          <Icon className="w-4 h-4" />
-                          {period}
-                        </div>
-                        <div className="flex gap-3">
-                          {times.map((time) => {
-                            const isSelected =
-                              selectedShow?.theatreId === theatre.id &&
-                              selectedShow?.time === time &&
-                              selectedShow?.date?.id === selectedDate;
-
-                            return (
-                              <button
-                                key={time}
-                                onClick={() => handleTimeClick(theatre, time)}
-                                className={`px-5 py-2.5 rounded-xl border transition-all font-semibold text-sm whitespace-nowrap ${isSelected
-                                  ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30'
-                                  : 'bg-white border-slate-200 text-slate-700 hover:border-blue-500 hover:text-blue-600 hover:shadow-md'
-                                  }`}
-                              >
-                                {formatTimeDisplay(time)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
+                  return (
+                    <button
+                      key={show.id}
+                      onClick={() => handleTimeClick(theatre, show)}
+                      className={`px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm ${isSelected
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] ring-2 ring-blue-400 ring-offset-2'
+                          : 'border-slate-300 text-slate-700 hover:border-blue-600 hover:bg-blue-600 hover:text-white'
+                        }`}
+                    >
+                      {show.time}
+                    </button>
+                  );
+                  })
+                )}
               </div>
 
-              {/* Price Info */}
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <span className="text-slate-600 text-sm">Price: </span>
-                <span className="text-slate-900 font-semibold">₹{theatre.price}</span>
-              </div>
+              {/* Price Info (show-level pricing shown in seat selection / payment) */}
             </motion.div>
           ))
         )}

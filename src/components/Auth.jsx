@@ -6,6 +6,7 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [role, setRole] = useState('user'); // 'user' or 'owner'
   const [showSuccess, setShowSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
@@ -31,102 +32,60 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
     return hash.toString();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
     setError('');
 
-    // If owner registration, save to localStorage and show success
-    if (!isLogin && role === 'owner') {
-      // Check if email already exists
-      const existingOwners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
-      const existingUsers = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
-
-      if (existingOwners.find(o => o.email === formData.email) || existingUsers.find(u => u.email === formData.email)) {
-        setError('This email is already registered. Please login instead.');
-        return;
-      }
-
-      // Store owner registration in localStorage with hashed password
-      const ownerData = {
-        email: formData.email,
-        name: formData.name,
-        password: hashPassword(formData.password),
-        role: 'owner',
-        theatreName: formData.theatreName
-      };
-
-      existingOwners.push(ownerData);
-      localStorage.setItem('Theatre_Owners', JSON.stringify(existingOwners));
-
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        setIsLogin(true);
-        setFormData({ name: '', email: '', password: '', theatreName: '' });
-      }, 3000);
-      return;
-    }
-
-    // For user registration, also store in localStorage
-    if (!isLogin && role === 'user') {
-      // Check if email already exists
-      const existingOwners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
-      const existingUsers = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
-
-      if (existingOwners.find(o => o.email === formData.email) || existingUsers.find(u => u.email === formData.email)) {
-        setError('This email is already registered. Please login instead.');
-        return;
-      }
-
-      const userData = {
-        email: formData.email,
-        name: formData.name,
-        password: hashPassword(formData.password),
-        role: 'user'
-      };
-      existingUsers.push(userData);
-      localStorage.setItem('Show_Time_Users', JSON.stringify(existingUsers));
-
-      // Auto-login after user registration
-      onAuthSuccess({
-        email: userData.email,
-        name: userData.name,
-        role: 'user'
-      });
-      return;
-    }
-
-    // Handle Login - Validate credentials
-    if (isLogin) {
-      const owners = JSON.parse(localStorage.getItem('Theatre_Owners') || '[]');
-      const users = JSON.parse(localStorage.getItem('Show_Time_Users') || '[]');
-      const hashedPassword = hashPassword(formData.password);
-
-      // Check if email exists in owners list
-      const owner = owners.find(o => o.email === formData.email);
-      if (owner) {
-        // Validate password
-        if (owner.password !== hashedPassword) {
-          setError('Invalid password. Please try again.');
-          return;
-        }
-        // Login successful as owner
-        onAuthSuccess({
-          email: owner.email,
-          name: owner.name,
-          theatreName: owner.theatreName,
-          role: 'owner'
+    try {
+      if (isLogin) {
+        // Login via backend
+        const res = await fetch('http://localhost:8080/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
         });
-        return;
-      }
+        if (!res.ok) {
+          throw new Error('Invalid email or password');
+        }
+        const user = await res.json();
+        onAuthSuccess(user);
+      } else {
+        // Registration via backend
+        const res = await fetch('http://localhost:8080/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            role: role === 'owner' ? 'OWNER' : 'USER',
+            theatreName: role === 'owner' ? formData.theatreName : null,
+            phone: null,
+            location: null,
+          }),
+        });
+        if (res.status === 409) {
+          throw new Error('Email already registered');
+        }
+        if (!res.ok) {
+          throw new Error('Registration failed');
+        }
 
-      // Check if email exists in users list
-      const user = users.find(u => u.email === formData.email);
-      if (user) {
-        // Validate password
-        if (user.password !== hashedPassword) {
-          setError('Invalid password. Please try again.');
-          return;
+        // For owner, show success then switch to login
+        if (role === 'owner') {
+          setShowSuccess(true);
+          setTimeout(() => {
+            setShowSuccess(false);
+            setIsLogin(true);
+            setFormData({ name: '', email: '', password: '', theatreName: '' });
+          }, 2000);
+        } else {
+          const user = await res.json();
+          onAuthSuccess(user);
         }
         // Login successful as user
         onAuthSuccess({
@@ -136,10 +95,11 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
         });
         return;
       }
-
-      // Email not found
-      setError('No account found with this email. Please register first.');
-      return;
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -395,19 +355,29 @@ const Auth = ({ onAuthSuccess, initialMode = 'login' }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
                 type="submit"
-                className={`w-full py-4 bg-gradient-to-r ${isUser
-                  ? 'from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/30'
-                  : 'from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-lg shadow-violet-500/30'
-                  } text-white rounded-xl font-semibold uppercase tracking-wider transition-all transform hover:scale-[1.02]`}
+                disabled={submitting}
+                className={`w-full py-4 bg-gradient-to-r ${
+                  isUser
+                    ? 'from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/30'
+                    : 'from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-lg shadow-violet-500/30'
+                } text-white rounded-xl font-semibold uppercase tracking-wider transition-all transform hover:scale-[1.02]`}
               >
-                {isLogin
-                  ? 'Login'
-                  : isUser
-                    ? 'Register'
-                    : 'Open Box Office'
-                }
+                {submitting
+                  ? (isLogin ? 'Logging in...' : 'Creating account...')
+                  : isLogin
+                    ? 'Login'
+                    : isUser
+                      ? 'Register'
+                      : 'Open Box Office'}
               </motion.button>
             </form>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mt-4 text-center text-sm text-red-600">
+                {error}
+              </div>
+            )}
 
             {/* Switch Link */}
             <motion.div
