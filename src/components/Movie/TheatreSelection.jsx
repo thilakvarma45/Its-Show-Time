@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
-import { MapPin, Calendar, Search } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { MapPin, Calendar, Search, Sun, Sunset, Moon } from 'lucide-react';
 
 const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
   const today = new Date();
@@ -11,15 +11,69 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
     return {
       id: idx + 1,
       day: d.toLocaleDateString(undefined, { weekday: 'short' }),
-      date: d.getDate()
+      date: d.getDate(),
+      fullDate: d.toISOString().split('T')[0]
     };
   });
 
   const [selectedDate, setSelectedDate] = useState(selectedShow?.date?.id || generatedDates[0].id);
   const [searchQuery, setSearchQuery] = useState('');
   const [theatres, setTheatres] = useState([]);
+  const [datesWithShows, setDatesWithShows] = useState(new Set());
+  const [allDatesLoaded, setAllDatesLoaded] = useState(false);
 
-  // Load all venues and then shows per venue for the selected date
+  // Load shows for ALL dates on mount to determine which dates have shows
+  useEffect(() => {
+    const loadAllDates = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/api/venues');
+        if (!res.ok) return;
+        
+        const venues = await res.json();
+        const theatreVenues = venues.filter(
+          (v) => (v.type || '').toString().toUpperCase() === 'THEATRE'
+        );
+
+        const datesSet = new Set();
+        
+        // Check each date for shows
+        await Promise.all(
+          generatedDates.map(async (date) => {
+            const hasShowsForDate = await Promise.all(
+              theatreVenues.map(async (venue) => {
+                try {
+                  const url = movieId 
+                    ? `http://localhost:8080/api/shows/venue/${venue.id}?date=${date.fullDate}&movieId=${movieId}`
+                    : `http://localhost:8080/api/shows/venue/${venue.id}?date=${date.fullDate}`;
+                  
+                  const showRes = await fetch(url);
+                  if (!showRes.ok) return false;
+                  const shows = await showRes.json();
+                  return shows.length > 0;
+                } catch {
+                  return false;
+                }
+              })
+            );
+            
+            if (hasShowsForDate.some(has => has)) {
+              datesSet.add(date.fullDate);
+            }
+          })
+        );
+        
+        setDatesWithShows(datesSet);
+        setAllDatesLoaded(true);
+      } catch (err) {
+        console.error('Error loading dates:', err);
+        setAllDatesLoaded(true);
+      }
+    };
+    
+    loadAllDates();
+  }, [movieId]);
+
+  // Load theatres for selected date
   useEffect(() => {
     const loadTheatres = async () => {
       try {
@@ -40,7 +94,6 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
         const withShows = await Promise.all(
           theatreVenues.map(async (venue) => {
             try {
-              // Filter shows by movie ID if provided
               const url = movieId 
                 ? `http://localhost:8080/api/shows/venue/${venue.id}?date=${isoDate}&movieId=${movieId}`
                 : `http://localhost:8080/api/shows/venue/${venue.id}?date=${isoDate}`;
@@ -56,14 +109,18 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
             }
           })
         );
+        
         setTheatres(withShows);
       } catch (err) {
         console.error('Error loading theatres/shows:', err);
         setTheatres([]);
       }
     };
-    loadTheatres();
-  }, [selectedDate, movieId]);
+    
+    if (allDatesLoaded) {
+      loadTheatres();
+    }
+  }, [selectedDate, movieId, allDatesLoaded]);
 
   const handleTimeClick = (theatre, show) => {
     onTimeSelect({
@@ -71,14 +128,38 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
       theatreId: theatre.id,
       theatreName: theatre.name,
       time: show.time,
-      // pass both category prices from backend
-      standardPrice: show.standardPrice,
+      // pass all three category prices from backend
+      silverPrice: show.silverPrice,
+      goldPrice: show.goldPrice,
       vipPrice: show.vipPrice,
       // fallback single price for any older consumers
-      price: show.standardPrice || show.vipPrice || 0,
+      price: show.goldPrice || show.silverPrice || show.vipPrice || 0,
       date: generatedDates.find((d) => d.id === selectedDate),
     });
   };
+
+  // Get time of day icon
+  const getTimeIcon = (timeString) => {
+    const hour = parseInt(timeString.split(':')[0]);
+    const isPM = timeString.toLowerCase().includes('pm');
+    const actualHour = isPM && hour !== 12 ? hour + 12 : (!isPM && hour === 12 ? 0 : hour);
+    
+    if (actualHour >= 5 && actualHour < 12) {
+      return Sun; // Morning
+    } else if (actualHour >= 12 && actualHour < 17) {
+      return Sun; // Afternoon
+    } else if (actualHour >= 17 && actualHour < 20) {
+      return Sunset; // Evening
+    } else {
+      return Moon; // Night
+    }
+  };
+
+  // Filter dates to only show those with shows
+  const availableDates = useMemo(() => {
+    if (!allDatesLoaded) return generatedDates; // Show all while loading
+    return generatedDates.filter(date => datesWithShows.has(date.fullDate));
+  }, [generatedDates, datesWithShows, allDatesLoaded]);
 
   // Filter theatres by search query
   const filteredTheatres = theatres
@@ -108,8 +189,8 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
             Select Date
           </h3>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {generatedDates.map((date) => (
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
+          {availableDates.map((date) => (
             <button
               key={date.id}
               onClick={() => setSelectedDate(date.id)}
@@ -194,16 +275,19 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
                     selectedShow?.theatreId === theatre.id &&
                     selectedShow?.time === show.time &&
                     selectedShow?.date?.id === selectedDate;
+                  
+                  const TimeIcon = getTimeIcon(show.time);
 
                   return (
                     <button
                       key={show.id}
                       onClick={() => handleTimeClick(theatre, show)}
-                      className={`px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm ${isSelected
+                      className={`relative px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm ${isSelected
                           ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] ring-2 ring-blue-400 ring-offset-2'
-                          : 'border-slate-300 text-slate-700 hover:border-blue-600 hover:bg-blue-600 hover:text-white'
+                          : 'bg-white border-slate-200 text-slate-700 hover:border-blue-500 hover:text-blue-600'
                         }`}
                     >
+                      <TimeIcon className={`absolute top-1 right-1 w-3 h-3 ${isSelected ? 'text-white/70' : 'text-slate-400'}`} />
                       {show.time}
                     </button>
                   );

@@ -76,7 +76,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
     if (paymentMethod === 'card' && (!formData.cardNumber || !formData.cardName || !formData.expiry || !formData.cvv)) {
       return;
     }
-    if (paymentMethod === 'upi' && !formData.upiId) {
+    if (paymentMethod === 'upi' && !formData.selectedUpiApp && !formData.upiId) {
       return;
     }
     if (paymentMethod === 'netbanking' && !formData.selectedBank) {
@@ -444,22 +444,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
           {paymentMethod === 'upi' && (
             <>
               <div>
-                <label className="block text-slate-600 text-sm mb-2">Enter UPI ID</label>
-                <input
-                  type="text"
-                  name="upiId"
-                  value={formData.upiId}
-                  onChange={handleChange}
-                  placeholder="yourname@upi"
-                  required={paymentMethod === 'upi'}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
-                           focus:outline-none focus:border-purple-600 transition-colors"
-                />
-                <p className="text-xs text-slate-500 mt-1">e.g., yourname@paytm, yourname@ybl, yourname@phonepe</p>
-              </div>
-
-              <div>
-                <label className="block text-slate-600 text-sm mb-3">Or Pay Using</label>
+                <label className="block text-slate-600 text-sm mb-3">Select UPI App</label>
                 <div className="grid grid-cols-4 gap-4">
                   {upiApps.map((app) => {
                     const isSelected = formData.selectedUpiApp === app.name;
@@ -470,7 +455,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                         className={`bg-white p-6 rounded-2xl hover:scale-105 transition-all flex flex-col items-center justify-center aspect-square shadow-lg border-2 ${isSelected ? 'border-purple-500 ring-2 ring-purple-200 scale-105' : 'border-slate-200 hover:border-slate-300'
                           }`}
                         onClick={() => {
-                          setFormData(prev => ({ ...prev, selectedUpiApp: app.name }));
+                          setFormData(prev => ({ ...prev, selectedUpiApp: app.name, upiId: '' }));
                         }}
                       >
                         <div className="mb-2">{app.logo}</div>
@@ -491,6 +476,34 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                   })}
                 </div>
               </div>
+
+              {!formData.selectedUpiApp && (
+                <>
+                  <div className="relative py-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-slate-500">OR</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-slate-600 text-sm mb-2">Enter UPI ID</label>
+                    <input
+                      type="text"
+                      name="upiId"
+                      value={formData.upiId}
+                      onChange={handleChange}
+                      placeholder="yourname@upi"
+                      required={paymentMethod === 'upi' && !formData.selectedUpiApp}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
+                               focus:outline-none focus:border-purple-600 transition-colors"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">e.g., yourname@paytm, yourname@ybl, yourname@phonepe</p>
+                  </div>
+                </>
+              )}
             </>
           )}
 

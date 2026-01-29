@@ -118,6 +118,7 @@ const BookingDetails = ({ item, onBack }) => {
             date: showDate,
             time: showTime,
             status: b.status || 'CONFIRMED',
+            totalAmount: Number(b.totalAmount) || 0,
           };
         });
 
@@ -209,7 +210,9 @@ const BookingDetails = ({ item, onBack }) => {
               </div>
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-3 sm:p-4">
                 <p className="text-xs sm:text-sm text-slate-600 mb-1">Revenue</p>
-                <p className="text-xl sm:text-2xl font-bold text-slate-800">₹{(bookings.length * 200).toLocaleString()}</p>
+                <p className="text-xl sm:text-2xl font-bold text-slate-800">
+                  ₹{bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>

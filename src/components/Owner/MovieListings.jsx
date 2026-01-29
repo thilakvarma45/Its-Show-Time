@@ -27,7 +27,7 @@ const MovieListings = ({ onSelectShow, owner }) => {
           throw new Error('Failed to load scheduled movies');
         }
         const data = await res.json();
-        // Each item: { tmdbMovieId, showCount, firstShowDate, lastShowDate, totalBookings }
+        // Each item: { tmdbMovieId, showCount, firstShowDate, lastShowDate, totalBookings, totalRevenue, theatres }
         
         // Fetch movie details from TMDB for each movie
         const moviesWithDetails = await Promise.all(
@@ -35,7 +35,7 @@ const MovieListings = ({ onSelectShow, owner }) => {
             try {
               const tmdbMovie = await getMovieById(movie.tmdbMovieId);
               return {
-                ...movie,
+                ...movie, // includes totalRevenue, totalBookings, theatres from backend
                 title: tmdbMovie.title,
                 poster: tmdbMovie.poster,
                 genre: tmdbMovie.genre,
@@ -45,7 +45,7 @@ const MovieListings = ({ onSelectShow, owner }) => {
               console.error(`Failed to fetch TMDB details for movie ${movie.tmdbMovieId}:`, err);
               // Return with placeholder if TMDB fetch fails
               return {
-                ...movie,
+                ...movie, // includes totalRevenue, totalBookings, theatres from backend
                 title: `Movie ${movie.tmdbMovieId}`,
                 poster: 'https://via.placeholder.com/500x750?text=No+Poster',
                 genre: [],
@@ -80,12 +80,14 @@ const MovieListings = ({ onSelectShow, owner }) => {
           throw new Error('Failed to load events');
         }
         const data = await res.json();
-        const normalized = data.map((e) => ({
-          id: e.id,
+        const normalized = data.map((eventData) => ({
+          id: eventData.event?.id || eventData.id,
           type: 'event',
-          title: e.title,
-          poster: e.posterUrl,
-          venue: e.venue?.name || e.address || 'Event venue',
+          title: eventData.event?.title || eventData.title,
+          poster: eventData.event?.posterUrl || eventData.posterUrl,
+          venue: eventData.event?.venue?.name || eventData.venue?.name || eventData.event?.address || eventData.address || 'Event venue',
+          totalBookings: eventData.totalBookings || 0,
+          totalRevenue: eventData.totalRevenue || 0,
         }));
         setEvents(normalized);
       } catch (err) {
@@ -220,7 +222,7 @@ const MovieListings = ({ onSelectShow, owner }) => {
                   <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
                     <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <span className="line-clamp-1">
-                      TMDB ID: {item.tmdbMovieId}
+                      {item.theatres || 'No theatres'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
@@ -245,7 +247,15 @@ const MovieListings = ({ onSelectShow, owner }) => {
                     Total Bookings
                   </p>
                   <p className="text-lg sm:text-xl font-bold text-slate-800">
-                    {item.type === 'movie' ? item.totalBookings : '—'}
+                    {item.totalBookings || 0}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 mb-0.5 sm:mb-1">
+                    Revenue
+                  </p>
+                  <p className="text-lg sm:text-xl font-bold text-emerald-600">
+                    ₹{(item.totalRevenue || 0).toLocaleString()}
                   </p>
                 </div>
                 <button className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm font-semibold text-violet-600 group-hover:gap-1.5 sm:group-hover:gap-2 transition-all">

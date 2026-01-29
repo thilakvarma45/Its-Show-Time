@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Settings, LogOut, Bookmark, Heart, ChevronDown, HelpCircle, MessageCircle } from 'lucide-react';
+import { User, Settings, LogOut, Bookmark, Heart, ChevronDown, HelpCircle } from 'lucide-react';
+import { getInitials } from '../../utils/formatters';
 
 const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,6 +19,8 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
   }, []);
 
   // Filter menu items based on user role
+  const isOwner = user?.role === 'owner' || user?.role === 'OWNER';
+  
   const allMenuItems = [
     { icon: Settings, label: 'Settings', action: 'settings', roles: ['user', 'owner'] },
     { icon: Bookmark, label: 'My Bookings', action: 'bookings', roles: ['user'] },
@@ -29,7 +32,7 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
   ];
 
   const menuItems = allMenuItems.filter(item =>
-    item.roles.includes(user?.role === 'owner' ? 'owner' : 'user')
+    item.roles.includes(isOwner ? 'owner' : 'user')
   );
 
   const handleItemClick = (action) => {
@@ -41,14 +44,6 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  // Get initials for avatar
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    const names = name.split(' ');
-    return names.length > 1
-      ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
-      : names[0][0].toUpperCase();
-  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -59,9 +54,17 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
       >
         {/* Avatar */}
         <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-            {getInitials(user?.name)}
-          </div>
+          {user?.profileImageUrl ? (
+            <img
+              src={user.profileImageUrl}
+              alt={user?.name}
+              className="w-10 h-10 rounded-full object-cover shadow-md ring-2 ring-white group-hover:shadow-lg group-hover:scale-105 transition-all duration-200"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+              {getInitials(user?.name)}
+            </div>
+          )}
           <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-white rounded-full shadow-sm"></div>
         </div>
 
@@ -95,9 +98,17 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
             {/* User Info Header */}
             <div className="px-4 py-4 border-b border-slate-100 bg-gradient-to-br from-violet-50 to-fuchsia-50">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold shadow-md">
-                  {getInitials(user?.name)}
-                </div>
+                {user?.profileImageUrl ? (
+                  <img
+                    src={user.profileImageUrl}
+                    alt={user?.name}
+                    className="w-12 h-12 rounded-full object-cover shadow-md"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold shadow-md">
+                    {getInitials(user?.name)}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-slate-800 truncate">
                     {user?.name || 'User'}

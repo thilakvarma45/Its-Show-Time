@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion';
 import { CheckCircle, Download, Share2, Calendar, Clock, MapPin, Armchair } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { formatBookingId, formatCurrency } from '../../utils/formatters';
 
 const Ticket = ({ bookingDetails, onNewBooking }) => {
   const isEvent = bookingDetails.bookingType === 'EVENT';
   const item = isEvent ? bookingDetails.selectedEvent : bookingDetails.selectedMovie;
-  const currency = '₹';
+  const displayBookingId = formatBookingId(bookingDetails.bookingId) || `BK${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+  const ticketUrl = `${window.location.origin}/ticket/${bookingDetails.bookingId || 'preview'}`;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -40,9 +43,9 @@ const Ticket = ({ bookingDetails, onNewBooking }) => {
           <img
             src={item.poster}
             alt={item.title}
-            className="w-full h-full object-cover blur-sm opacity-50"
+            className="w-full h-full object-cover blur-sm opacity-80"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-white" />
           <div className="absolute bottom-4 left-6 right-6">
             <h3 className="text-2xl font-bold text-white uppercase tracking-wide drop-shadow-lg">
               {item.title}
@@ -90,10 +93,9 @@ const Ticket = ({ bookingDetails, onNewBooking }) => {
                 <div className="flex-1">
                   <div className="text-slate-600 text-xs uppercase mb-1">Zones & Passes</div>
                   <div className="text-slate-900 font-semibold">
-                    {Object.entries(bookingDetails.selectedZones || {}).map(([zoneId, categories]) => {
-                      const zone = item.zones.find(z => z.id === zoneId);
+                    {Object.entries(bookingDetails.selectedZones || {}).map(([zoneName, categories]) => {
                       const details = Object.entries(categories).map(([cat, qty]) => `${qty} ${cat}${qty > 1 ? 's' : ''}`).join(', ');
-                      return `${zone?.name}: ${details}`;
+                      return `${zoneName}: ${details}`;
                     }).join(' | ')}
                   </div>
                 </div>
@@ -147,22 +149,25 @@ const Ticket = ({ bookingDetails, onNewBooking }) => {
           <div className="flex justify-between items-center">
             <div>
               <div className="text-slate-600 text-xs uppercase mb-1">Total Amount</div>
-              <div className={`text-2xl font-bold ${isEvent ? 'text-purple-600' : 'text-blue-600'}`}>{currency}{bookingDetails.totalPrice}</div>
+              <div className={`text-2xl font-bold ${isEvent ? 'text-purple-600' : 'text-blue-600'}`}>{formatCurrency(bookingDetails.totalPrice)}</div>
             </div>
             <div className="text-right">
               <div className="text-slate-600 text-xs uppercase mb-1">Booking ID</div>
-              <div className="text-slate-900 font-mono">BK{Math.random().toString(36).substr(2, 9).toUpperCase()}</div>
+              <div className="text-slate-900 font-mono font-bold">{displayBookingId}</div>
             </div>
           </div>
 
-          {/* QR Code Placeholder */}
-          <div className="flex justify-center pt-4">
-            <div className="w-32 h-32 bg-white rounded-lg flex items-center justify-center border-2 border-slate-200">
-              <div className="text-center text-xs text-gray-800">
-                <div className="font-bold mb-1">QR CODE</div>
-                <div className="text-[10px]">Scan at {isEvent ? 'Venue' : 'Theatre'}</div>
-              </div>
+          {/* QR Code */}
+          <div className="flex flex-col items-center pt-4">
+            <div className="bg-white p-3 rounded-lg border-2 border-slate-200 shadow-sm">
+              <QRCodeSVG 
+                value={ticketUrl} 
+                size={128}
+                level="H"
+                includeMargin={false}
+              />
             </div>
+            <p className="text-xs text-slate-500 mt-2">Scan at {isEvent ? 'Venue' : 'Theatre'}</p>
           </div>
         </div>
       </motion.div>

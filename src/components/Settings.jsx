@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Mail, Phone, MapPin, Camera, Save, ArrowLeft } from 'lucide-react';
+import { getInitials } from '../utils/formatters';
+import { toast } from 'react-toastify';
 
 const Settings = ({ user, onBack, onSave }) => {
   const [formData, setFormData] = useState({
@@ -9,9 +11,12 @@ const Settings = ({ user, onBack, onSave }) => {
     phone: user?.phone || '',
     location: user?.location || '',
     bio: user?.bio || '',
+    profileImageUrl: user?.profileImageUrl || '',
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -21,22 +26,86 @@ const Settings = ({ user, onBack, onSave }) => {
     setIsEditing(true);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(formData);
-    setIsEditing(false);
-    // Show success message
-    alert('Profile updated successfully!');
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+      setProfileImageFile(file);
+      setIsEditing(true);
+    }
   };
 
-  // Get initials for avatar
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    const names = name.split(' ');
-    return names.length > 1 
-      ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
-      : names[0][0].toUpperCase();
+  const uploadProfileImage = async () => {
+    if (!profileImageFile || !user?.id) return null;
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', profileImageFile);
+
+      const response = await fetch(`http://localhost:8080/api/upload/profile/${user.id}`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      return `http://localhost:8080${data.imageUrl}`;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload profile image');
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    let updatedData = { ...formData };
+
+    // Upload profile image if selected
+    if (profileImageFile) {
+      const imageUrl = await uploadProfileImage();
+      if (imageUrl) {
+        updatedData.profileImageUrl = imageUrl;
+      }
+    }
+
+    // Update user profile via API
+    try {
+      const response = await fetch(`http://localhost:8080/api/auth/user/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const updatedUser = await response.json();
+      onSave(updatedUser);
+      setFormData({
+        ...updatedData,
+        profileImageUrl: updatedUser.profileImageUrl || updatedData.profileImageUrl,
+      });
+      setIsEditing(false);
+      setProfileImageFile(null);
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 sm:px-8 py-8 sm:py-12">
@@ -73,12 +142,26 @@ const Settings = ({ user, onBack, onSave }) => {
         <div className="relative h-32 bg-gradient-to-r from-violet-50 via-purple-50 to-fuchsia-50 border-b border-slate-200">
           <div className="absolute -bottom-16 left-8">
             <div className="relative group">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-xl border-4 border-white">
-                {getInitials(formData.name)}
-              </div>
-              <button className="absolute bottom-2 right-2 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg hover:bg-violet-700 transition-colors">
+              {formData.profileImageUrl || profileImageFile ? (
+                <img
+                  src={profileImageFile ? URL.createObjectURL(profileImageFile) : formData.profileImageUrl}
+                  alt={formData.name}
+                  className="w-32 h-32 rounded-full object-cover shadow-xl border-4 border-white"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-xl border-4 border-white">
+                  {getInitials(formData.name)}
+                </div>
+              )}
+              <label className="absolute bottom-2 right-2 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg hover:bg-violet-700 transition-colors cursor-pointer">
                 <Camera className="w-5 h-5 text-white" />
-              </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfileImageChange}
+                  className="hidden"
+                />
+              </label>
             </div>
           </div>
         </div>
@@ -178,15 +261,15 @@ const Settings = ({ user, onBack, onSave }) => {
           <div className="flex flex-col sm:flex-row gap-3 mt-8">
             <button
               type="submit"
-              disabled={!isEditing}
+              disabled={!isEditing || uploadingImage}
               className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
-                isEditing
+                isEditing && !uploadingImage
                   ? 'bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-lg shadow-violet-500/30'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }`}
             >
               <Save className="w-5 h-5" />
-              Save Changes
+              {uploadingImage ? 'Uploading...' : 'Save Changes'}
             </button>
             <button
               type="button"

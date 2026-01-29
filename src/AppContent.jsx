@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -13,6 +15,8 @@ import ProfileDropdown from './components/Users/ProfileDropdown';
 import Settings from './components/Settings';
 import MyBookings from './components/Users/MyBookings';
 import Wishlist from './components/Users/Wishlist';
+import TicketView from './components/Users/TicketView';
+import HelpAndSupport from './components/Users/HelpAndSupport';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, user }) => {
@@ -48,6 +52,13 @@ const AppContent = () => {
 
   // Shared state
   const [totalPrice, setTotalPrice] = useState(0);
+  const [bookingId, setBookingId] = useState(null);
+  
+  // Wishlist state
+  const [wishlist, setWishlist] = useState([]);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Handlers: navigation and booking flows are identical to previous AppContent
   const handleMovieSelect = (movie) => {
@@ -112,6 +123,7 @@ const AppContent = () => {
     setSelectedSeats([]);
     setSelectedZones({});
     setTotalPrice(0);
+    setBookingId(null);
     setBookingStep(1);
   };
 
@@ -144,12 +156,16 @@ const AppContent = () => {
         setSelectedShow(null);
         setSelectedSeats([]);
         setTotalPrice(0);
+        setBookingId(null);
       } else if (newStep === 2) {
         // Going back to step 2 (seats) - clear seat selection
         setSelectedSeats([]);
         setTotalPrice(0);
+        setBookingId(null);
+      } else if (newStep === 3) {
+        // Going back to step 3 (payment) - clear booking ID
+        setBookingId(null);
       }
-      // If going back to step 3 (payment), keep seats but could clear payment if needed
     }
     setBookingStep(newStep);
   };
@@ -169,8 +185,9 @@ const AppContent = () => {
     try {
       if (!user) return;
 
+      let response;
       if (bookingType === 'MOVIE') {
-        await fetch('http://localhost:8080/api/bookings/movie', {
+        response = await fetch('http://localhost:8080/api/bookings/movie', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -182,7 +199,7 @@ const AppContent = () => {
           }),
         });
       } else {
-        await fetch('http://localhost:8080/api/bookings/event', {
+        response = await fetch('http://localhost:8080/api/bookings/event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -194,6 +211,11 @@ const AppContent = () => {
             paymentMethod: paymentInfo.paymentMethod,
           }),
         });
+      }
+
+      if (response && response.ok) {
+        const bookingData = await response.json();
+        setBookingId(bookingData.id); // Store booking ID from backend
       }
     } catch (e) {
       console.error('Error creating booking:', e);
@@ -240,6 +262,9 @@ const AppContent = () => {
     } else if (action === 'bookings') {
       setView('BOOKINGS');
       navigate('/bookings');
+    } else if (action === 'help-support') {
+      setView('HELP_SUPPORT');
+      navigate('/help-support');
     } else if (action === 'wishlist') {
       setView('WISHLIST');
       navigate('/wishlist');
@@ -255,6 +280,21 @@ const AppContent = () => {
     });
   };
 
+  const handleToggleWishlist = (item) => {
+    setWishlist((prev) => {
+      const exists = prev.find((w) => w.id === item.id && w.type === item.type);
+      if (exists) {
+        return prev.filter((w) => !(w.id === item.id && w.type === item.type));
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  const handleRemoveFromWishlist = (id, type) => {
+    setWishlist((prev) => prev.filter((w) => !(w.id === id && w.type === type)));
+  };
+
   const bookingDetails =
     bookingType === 'MOVIE'
       ? {
@@ -263,6 +303,7 @@ const AppContent = () => {
           selectedSeats,
           totalPrice,
           bookingType: 'MOVIE',
+          bookingId,
         }
       : {
           selectedEvent,
@@ -270,11 +311,23 @@ const AppContent = () => {
           selectedZones,
           totalPrice,
           bookingType: 'EVENT',
+          bookingId,
         };
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    <>
+      <ToastContainer
+        position="top-right"
+        autoClose={2500}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        draggable
+        theme="light"
+      />
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route
@@ -323,7 +376,15 @@ const AppContent = () => {
                     </div>
                   </div>
                 </header>
-                <Home onMovieSelect={handleMovieSelect} onEventSelect={handleEventSelect} user={user} />
+                <Home 
+                  onMovieSelect={handleMovieSelect} 
+                  onEventSelect={handleEventSelect} 
+                  user={user}
+                  wishlist={wishlist}
+                  onToggleWishlist={handleToggleWishlist}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                />
               </div>
             </ProtectedRoute>
           }
@@ -441,11 +502,22 @@ const AppContent = () => {
                 </header>
                 <Wishlist
                   user={user}
+                  wishlist={wishlist}
                   onBack={handleNavigateHome}
                   onMovieSelect={handleMovieSelect}
                   onEventSelect={handleEventSelect}
+                  onRemoveFromWishlist={handleRemoveFromWishlist}
                 />
               </div>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/help-support"
+          element={
+            <ProtectedRoute user={user}>
+              <HelpAndSupport onBack={handleNavigateHome} />
             </ProtectedRoute>
           }
         />
@@ -524,10 +596,14 @@ const AppContent = () => {
           }
         />
 
+        {/* Public Ticket View Route (accessible via QR code scan) */}
+        <Route path="/ticket/:id" element={<TicketView />} />
+
         {/* Catch all - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AnimatePresence>
+        </Routes>
+      </AnimatePresence>
+    </>
   );
 };
 
