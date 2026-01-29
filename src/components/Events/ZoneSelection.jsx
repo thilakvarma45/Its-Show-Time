@@ -6,24 +6,30 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
   const [cart, setCart] = useState({});
 
   const updateQuantity = (zoneId, categoryType, delta) => {
-    setCart(prev => {
-      const newCart = { ...prev };
-      if (!newCart[zoneId]) {
-        newCart[zoneId] = {};
-      }
-      if (!newCart[zoneId][categoryType]) {
-        newCart[zoneId][categoryType] = 0;
-      }
-      const newValue = Math.max(0, newCart[zoneId][categoryType] + delta);
-      if (newValue === 0) {
-        delete newCart[zoneId][categoryType];
-        if (Object.keys(newCart[zoneId]).length === 0) {
-          delete newCart[zoneId];
-        }
+    // IMPORTANT: keep this updater fully immutable.
+    // In React StrictMode, state updaters can be invoked twice in dev.
+    // If we mutate nested objects, a single click can look like +2.
+    setCart((prev) => {
+      const prevZone = prev[zoneId] || {};
+      const prevQty = Number(prevZone[categoryType] || 0);
+      const nextQty = Math.max(0, prevQty + delta);
+
+      // Build next zone object immutably
+      let nextZone = { ...prevZone };
+      if (nextQty === 0) {
+        delete nextZone[categoryType];
       } else {
-        newCart[zoneId][categoryType] = newValue;
+        nextZone = { ...nextZone, [categoryType]: nextQty };
       }
-      return newCart;
+
+      // Build next cart immutably
+      const nextCart = { ...prev };
+      if (Object.keys(nextZone).length === 0) {
+        delete nextCart[zoneId];
+      } else {
+        nextCart[zoneId] = nextZone;
+      }
+      return nextCart;
     });
   };
 
@@ -102,6 +108,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                     {/* Quantity Stepper */}
                     <div className="flex items-center gap-3">
                       <button
+                        type="button"
                         onClick={() => updateQuantity(zone.id, category.type, -1)}
                         disabled={quantity === 0}
                         className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
@@ -112,6 +119,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                         {quantity}
                       </span>
                       <button
+                        type="button"
                         onClick={() => updateQuantity(zone.id, category.type, 1)}
                         className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white flex items-center justify-center transition-all shadow-md"
                       >

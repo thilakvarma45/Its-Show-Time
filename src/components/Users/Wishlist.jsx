@@ -2,26 +2,8 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Heart, Star, Calendar, Trash2 } from 'lucide-react';
 
 const Wishlist = ({ user, onBack, onMovieSelect, onEventSelect }) => {
-  // Mock wishlist data
-  const wishlistItems = [
-    {
-      id: 1,
-      type: 'movie',
-      title: 'Oppenheimer',
-      poster: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
-      rating: 8.5,
-      genre: ['Biography', 'Drama', 'History'],
-      duration: '3h 0min',
-    },
-    {
-      id: 2,
-      type: 'event',
-      title: 'Jazz Night Live',
-      poster: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629',
-      venue: 'Blue Note Jazz Club',
-      date: 'Mar 25, 2024',
-    },
-  ];
+  // No mock data; start with an empty wishlist until backend integration is added.
+  const wishlistItems = [];
 
   const handleRemove = (id) => {
     // Implementation for removing from wishlist

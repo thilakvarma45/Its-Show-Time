@@ -1,34 +1,47 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, MapPin, Clock, Ticket } from 'lucide-react';
 
 const MyBookings = ({ user, onBack }) => {
-  // Mock bookings data
-  const bookings = [
-    {
-      id: 1,
-      type: 'movie',
-      title: 'Dune: Part Two',
-      poster: 'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg',
-      date: '2024-03-15',
-      time: '7:00 PM',
-      venue: 'Cinepolis IMAX',
-      seats: ['F8', 'F9'],
-      price: 500,
-      status: 'confirmed',
-    },
-    {
-      id: 2,
-      type: 'event',
-      title: 'Rock Concert 2024',
-      poster: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3',
-      date: '2024-03-20',
-      time: '8:00 PM',
-      venue: 'Madison Square Garden',
-      seats: ['Gold - 2 tickets'],
-      price: 3000,
-      status: 'confirmed',
-    },
-  ];
+  const [bookings, setBookings] = useState([]);
+
+  useEffect(() => {
+    const loadBookings = async () => {
+      try {
+        if (!user?.id) {
+          setBookings([]);
+          return;
+        }
+        const res = await fetch(`http://localhost:8080/api/bookings/user/${user.id}`);
+        if (!res.ok) {
+          throw new Error('Failed to load bookings');
+        }
+        const data = await res.json();
+
+        // Map backend bookings into a UI-friendly shape
+        const normalized = data.map(b => ({
+          id: b.id,
+          type: b.type === 'EVENT' ? 'event' : 'movie',
+          title: b.show?.schedule?.tmdbMovieId
+            ? `Movie #${b.show.schedule.tmdbMovieId}`
+            : b.event?.title || 'Booking',
+          poster: b.event?.posterUrl || 'https://via.placeholder.com/300x450?text=Ticket',
+          date: b.bookedAt?.substring(0, 10),
+          time: '',
+          venue: b.show?.venue?.name || b.event?.venue?.name || 'Venue',
+          seats: [], // could be derived from bookingDetails JSON in future
+          price: b.totalAmount,
+          status: b.status?.toLowerCase() || 'confirmed',
+        }));
+
+        setBookings(normalized);
+      } catch (err) {
+        console.error('Error loading bookings:', err);
+        setBookings([]);
+      }
+    };
+    loadBookings();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-slate-900 to-black px-4 sm:px-8 py-8 sm:py-12">

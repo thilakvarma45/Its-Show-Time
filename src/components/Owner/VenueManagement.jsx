@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Search, SlidersHorizontal } from 'lucide-react';
-import { VENUE_LIST, AVAILABLE_AMENITIES } from '../../data/mockData';
+import { AVAILABLE_AMENITIES } from '../../data/mockData';
 import VenueCard from './VenueCard';
 
-const VenueManagement = () => {
-  const [venues, setVenues] = useState(VENUE_LIST);
+const VenueManagement = ({ owner }) => {
+  const [venues, setVenues] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'theatre', 'event_ground'
@@ -34,25 +34,91 @@ const VenueManagement = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const newVenue = {
-      id: venues.length + 1,
-      ...formData,
-      capacity: parseInt(formData.capacity)
+  // Load venues for this owner from backend
+  useEffect(() => {
+    const loadVenues = async () => {
+      try {
+        if (!owner?.id) {
+          setVenues([]);
+          return;
+        }
+        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`);
+        if (!res.ok) {
+          throw new Error('Failed to load venues');
+        }
+        const data = await res.json();
+        setVenues(
+          data.map((v) => ({
+            ...v,
+            // Backend stores amenities as JSON/text; normalize to array for UI.
+            amenities: (() => {
+              if (!v.amenities) return [];
+              try {
+                const parsed = JSON.parse(v.amenities);
+                return Array.isArray(parsed) ? parsed : [];
+              } catch {
+                return [];
+              }
+            })(),
+          }))
+        );
+      } catch (err) {
+        console.error('Error loading venues for owner:', err);
+        setVenues([]);
+      }
     };
-    setVenues([...venues, newVenue]);
-    setFormData({
-      name: '',
-      location: '',
-      address: '',
-      pincode: '',
-      country: 'India',
-      capacity: '',
-      amenities: [],
-      type: 'theatre'
-    });
-    setShowAddModal(false);
+    loadVenues();
+  }, [owner]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!owner?.id) return;
+
+    const payload = {
+      ownerId: owner.id,
+      name: formData.name,
+      // Map UI type to backend enum
+      type: formData.type === 'event_ground' ? 'EVENT_GROUND' : 'THEATRE',
+      location: formData.location,
+      address: formData.address,
+      pincode: formData.pincode,
+      country: formData.country,
+      capacity: parseInt(formData.capacity, 10),
+      amenities: JSON.stringify(formData.amenities || []),
+    };
+
+    try {
+      const res = await fetch('http://localhost:8080/api/venues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to create venue');
+      }
+      const saved = await res.json();
+      setVenues((prev) => [
+        ...prev,
+        {
+          ...saved,
+          amenities: formData.amenities,
+        },
+      ]);
+      setFormData({
+        name: '',
+        location: '',
+        address: '',
+        pincode: '',
+        country: 'India',
+        capacity: '',
+        amenities: [],
+        type: 'theatre',
+      });
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('Error creating venue:', err);
+      alert('Failed to create venue. Please try again.');
+    }
   };
 
   const handleDelete = (venueId) => {
@@ -69,17 +135,25 @@ const VenueManagement = () => {
       pincode: venue.pincode,
       country: venue.country,
       capacity: venue.capacity.toString(),
-      amenities: venue.amenities,
-      type: venue.type
+      amenities: venue.amenities || [],
+      // Map backend enum to UI value
+      type:
+        (venue.type || '').toString().toUpperCase() === 'EVENT_GROUND'
+          ? 'event_ground'
+          : 'theatre',
     });
     setShowAddModal(true);
   };
 
   // Filter venues
-  const filteredVenues = venues.filter(venue => {
-    // Filter by type
-    if (filterType !== 'all' && venue.type !== filterType) return false;
-    
+  const filteredVenues = venues.filter((venue) => {
+    // Filter by type (backend uses THEATRE / EVENT_GROUND)
+    if (filterType !== 'all') {
+      const backendType = (venue.type || '').toString().toUpperCase();
+      if (filterType === 'theatre' && backendType !== 'THEATRE') return false;
+      if (filterType === 'event_ground' && backendType !== 'EVENT_GROUND') return false;
+    }
+
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();

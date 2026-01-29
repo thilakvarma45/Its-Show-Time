@@ -2,10 +2,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Film, Calendar, X, Plus, Loader2, Search } from 'lucide-react';
-import { VENUE_LIST } from '../../data/mockData';
 import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
 
-const SmartScheduler = () => {
+const SmartScheduler = ({ owner }) => {
   const [activeTab, setActiveTab] = useState('MOVIE'); // 'MOVIE' | 'EVENT'
   const [movies, setMovies] = useState([]);
   const [loadingMovies, setLoadingMovies] = useState(true);
@@ -17,8 +16,14 @@ const SmartScheduler = () => {
   const [movieForm, setMovieForm] = useState({
     venueId: '',
     movieId: '',
+    // scheduling window
+    schedulePreset: '7', // '7' | '14' | 'custom'
+    startDate: '',
+    endDate: '',
+    // show times
     confirmedShows: [],
     customTime: '',
+    // pricing
     goldPrice: '',
     silverPrice: '',
     vipPrice: ''
@@ -89,19 +94,99 @@ const SmartScheduler = () => {
     eventName: '',
     artist: '',
     imageUrl: '',
+    description: '',
+    address: '',
+    dates: [],
     zones: []
   });
 
   // Suggested time slots
   const suggestedSlots = ['09:00 AM', '12:00 PM', '03:00 PM', '06:00 PM', '09:00 PM'];
 
-  // Filter venues by type
-  const theatreVenues = VENUE_LIST.filter(v => v.type === 'theatre');
-  const eventVenues = VENUE_LIST.filter(v => v.type === 'event_ground');
+  // Venues will be provided from backend / owner context instead of mock data
+  const [venues, setVenues] = useState([]);
+
+  // Filter venues by type (backend uses enum THEATRE / EVENT_GROUND)
+  const theatreVenues = venues.filter(v => {
+    const t = (v.type || '').toString().toUpperCase();
+    return t === 'THEATRE';
+  });
+  const eventVenues = venues.filter(v => {
+    const t = (v.type || '').toString().toUpperCase();
+    return t === 'EVENT_GROUND';
+  });
+
+  // Load venues for this owner (if provided)
+  useEffect(() => {
+    const loadVenues = async () => {
+      try {
+        if (!owner?.id) {
+          setVenues([]);
+          return;
+        }
+        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`);
+        if (!res.ok) {
+          throw new Error('Failed to load venues');
+        }
+        const data = await res.json();
+        setVenues(data);
+      } catch (err) {
+        console.error('Error loading venues:', err);
+        setVenues([]);
+      }
+    };
+    loadVenues();
+  }, [owner]);
+
+  // Helper to calculate end date for 7/14 presets
+  const calculateEndDate = (start, days) => {
+    if (!start) return '';
+    const startDate = new Date(start);
+    if (Number.isNaN(startDate.getTime())) return '';
+    const end = new Date(startDate);
+    end.setDate(startDate.getDate() + (days - 1));
+    return end.toISOString().split('T')[0];
+  };
 
   // Movie form handlers
   const handleMovieInputChange = (e) => {
     const { name, value } = e.target;
+    // When changing the preset, auto-update endDate if we already have a startDate
+    if (name === 'schedulePreset') {
+      if (value === '7' || value === '14') {
+        setMovieForm(prev => {
+          const days = value === '7' ? 7 : 14;
+          const newEnd = calculateEndDate(prev.startDate || new Date().toISOString().split('T')[0], days);
+          return {
+            ...prev,
+            schedulePreset: value,
+            startDate: prev.startDate || new Date().toISOString().split('T')[0],
+            endDate: newEnd
+          };
+        });
+      } else {
+        // custom - keep dates as-is, user will pick both
+        setMovieForm(prev => ({ ...prev, schedulePreset: value }));
+      }
+      return;
+    }
+
+    if (name === 'startDate') {
+      setMovieForm(prev => {
+        // If preset is 7 or 14, recompute endDate automatically
+        if (prev.schedulePreset === '7' || prev.schedulePreset === '14') {
+          const days = prev.schedulePreset === '7' ? 7 : 14;
+          return {
+            ...prev,
+            startDate: value,
+            endDate: calculateEndDate(value, days)
+          };
+        }
+        return { ...prev, startDate: value };
+      });
+      return;
+    }
+
     setMovieForm(prev => ({ ...prev, [name]: value }));
   };
 
@@ -132,19 +217,67 @@ const SmartScheduler = () => {
     }
   };
 
-  const handleMovieSubmit = (e) => {
+  const handleMovieSubmit = async (e) => {
     e.preventDefault();
-    // Here you would save the movie schedule
-    alert('Movie schedule created successfully!');
-    setMovieForm({
-      venueId: '',
-      movieId: '',
-      confirmedShows: [],
-      customTime: '',
-      goldPrice: '',
-      silverPrice: '',
-      vipPrice: ''
-    });
+
+    if (!movieForm.venueId || !movieForm.movieId) {
+      alert('Please select both a venue and a movie.');
+      return;
+    }
+    if (!movieForm.startDate || !movieForm.endDate) {
+      alert('Please select a valid start and end date.');
+      return;
+    }
+    if (movieForm.confirmedShows.length === 0) {
+      alert('Please add at least one show time.');
+      return;
+    }
+
+    try {
+      const payload = {
+        venueId: Number(movieForm.venueId),
+        tmdbMovieId: Number(movieForm.movieId),
+        startDate: movieForm.startDate,
+        endDate: movieForm.endDate,
+        showtimes: movieForm.confirmedShows,
+        standardPrice: Number(movieForm.goldPrice || 0),
+        vipPrice: Number(movieForm.vipPrice || 0),
+      };
+
+      const res = await fetch('http://localhost:8080/api/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('Failed to create schedule:', text);
+        alert('Failed to create movie schedule. Please check backend logs.');
+        return;
+      }
+
+      const data = await res.json();
+      alert(
+        `Movie schedule created successfully!\n\nSchedule ID: ${data.scheduleId}\nGenerated shows: ${data.generatedShowCount}`
+      );
+
+      setMovieForm({
+        venueId: '',
+        movieId: '',
+        schedulePreset: '7',
+        startDate: '',
+        endDate: '',
+        confirmedShows: [],
+        customTime: '',
+        goldPrice: '',
+        silverPrice: '',
+        vipPrice: ''
+      });
+    } catch (err) {
+      console.error('Error calling schedule API:', err);
+      alert('Unexpected error while creating schedule. See console for details.');
+    }
   };
 
   // Event form handlers
@@ -153,10 +286,41 @@ const SmartScheduler = () => {
     setEventForm(prev => ({ ...prev, [name]: value }));
   };
 
+  // Date management for events
+  const addDate = () => {
+    const dateId = `date_${Date.now()}`;
+    setEventForm(prev => ({
+      ...prev,
+      dates: [...prev.dates, { id: dateId, date: '', time: '' }]
+    }));
+  };
+
+  const updateDate = (dateId, field, value) => {
+    setEventForm(prev => ({
+      ...prev,
+      dates: prev.dates.map(date =>
+        date.id === dateId ? { ...date, [field]: value } : date
+      )
+    }));
+  };
+
+  const removeDate = (dateId) => {
+    setEventForm(prev => ({
+      ...prev,
+      dates: prev.dates.filter(date => date.id !== dateId)
+    }));
+  };
+
   const addZone = () => {
     setEventForm(prev => ({
       ...prev,
-      zones: [...prev.zones, { id: Date.now(), name: '', capacity: '', price: '' }]
+      zones: [...prev.zones, { 
+        id: `zone_${Date.now()}`, 
+        name: '', 
+        capacity: '', 
+        adultPrice: '',
+        childrenPrice: ''
+      }]
     }));
   };
 
@@ -176,17 +340,102 @@ const SmartScheduler = () => {
     }));
   };
 
-  const handleEventSubmit = (e) => {
+  const handleEventSubmit = async (e) => {
     e.preventDefault();
-    // Here you would save the event
-    alert('Event created successfully!');
-    setEventForm({
-      venueId: '',
-      eventName: '',
-      artist: '',
-      imageUrl: '',
-      zones: []
-    });
+    
+    if (!owner?.id) {
+      alert('Owner information is missing. Please refresh and try again.');
+      return;
+    }
+
+    if (eventForm.dates.length === 0) {
+      alert('Please add at least one date for the event.');
+      return;
+    }
+
+    if (eventForm.zones.length === 0) {
+      alert('Please add at least one zone for the event.');
+      return;
+    }
+
+    try {
+      // Get venue to get address if not provided
+      const selectedVenue = eventVenues.find(v => v.id === Number(eventForm.venueId));
+      if (!selectedVenue) {
+        alert('Please select a valid venue.');
+        return;
+      }
+
+      // Build eventConfig JSON matching frontend expectations
+      const zoneColors = [
+        'border-purple-500',
+        'border-pink-500',
+        'border-yellow-500',
+        'border-blue-500',
+        'border-green-500',
+        'border-red-500'
+      ];
+      
+      const eventConfig = {
+        dates: eventForm.dates.map((d, idx) => ({
+          id: d.id || `date_${idx + 1}`,
+          label: d.date && d.time 
+            ? `${new Date(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} | ${d.time}`
+            : d.date || `Date ${idx + 1}`,
+          date: d.date,
+          time: d.time || ''
+        })),
+        zones: eventForm.zones.map((z, idx) => ({
+          id: z.id || `zone_${idx + 1}`,
+          name: z.name || `Zone ${idx + 1}`,
+          capacity: Number(z.capacity) || 0,
+          color: zoneColors[idx % zoneColors.length], // Assign color for UI
+          categories: [
+            { type: 'Adult', price: Number(z.adultPrice) || 0 },
+            { type: 'Children', price: Number(z.childrenPrice) || 0 }
+          ]
+        }))
+      };
+
+      const response = await fetch('http://localhost:8080/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ownerId: owner.id,
+          venueId: Number(eventForm.venueId),
+          title: eventForm.eventName,
+          description: eventForm.artist || eventForm.description || '',
+          posterUrl: eventForm.imageUrl || '',
+          address: eventForm.address || selectedVenue.address || selectedVenue.location || '',
+          eventConfig: JSON.stringify(eventConfig)
+        })
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('Failed to create event:', text);
+        alert('Failed to create event. Please check backend logs.');
+        return;
+      }
+
+      const data = await response.json();
+      alert(`Event "${eventForm.eventName}" created successfully!`);
+      
+      // Reset form
+      setEventForm({
+        venueId: '',
+        eventName: '',
+        artist: '',
+        imageUrl: '',
+        description: '',
+        address: '',
+        dates: [],
+        zones: []
+      });
+    } catch (err) {
+      console.error('Error creating event:', err);
+      alert('Unexpected error while creating event. See console for details.');
+    }
   };
 
   return (
@@ -335,7 +584,92 @@ const SmartScheduler = () => {
               </div>
             </div>
 
-            {/* Step 3: Smart Timing Picker */}
+            {/* Step 3: Run Duration (7 / 14 / Custom) */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-3">
+                Run Duration in This Theatre
+              </label>
+
+              {/* Preset selector */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: '7' } })}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                    movieForm.schedulePreset === '7'
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
+                  }`}
+                >
+                  Next 7 days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: '14' } })}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                    movieForm.schedulePreset === '14'
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
+                  }`}
+                >
+                  Next 14 days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: 'custom' } })}
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                    movieForm.schedulePreset === 'custom'
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
+                  }`}
+                >
+                  Custom calendar
+                </button>
+              </div>
+
+              {/* Date pickers */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1 font-medium">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={movieForm.startDate}
+                    onChange={handleMovieInputChange}
+                    required
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-600 mb-1 font-medium">
+                    {movieForm.schedulePreset === 'custom' ? 'End Date' : 'Calculated End Date'}
+                  </label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={movieForm.endDate}
+                    onChange={handleMovieInputChange}
+                    required
+                    disabled={movieForm.schedulePreset !== 'custom'}
+                    className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
+                      movieForm.schedulePreset !== 'custom' ? 'opacity-70 cursor-not-allowed' : ''
+                    }`}
+                  />
+                  {movieForm.schedulePreset !== 'custom' && movieForm.startDate && movieForm.endDate && (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      This movie will appear from{' '}
+                      <span className="font-semibold">{movieForm.startDate}</span> to{' '}
+                      <span className="font-semibold">{movieForm.endDate}</span>.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4: Smart Timing Picker */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-3">Select Show Times</label>
               
@@ -405,7 +739,7 @@ const SmartScheduler = () => {
               )}
             </div>
 
-            {/* Step 4: Pricing */}
+            {/* Step 5: Pricing */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-3">Pricing</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -511,19 +845,102 @@ const SmartScheduler = () => {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Event Image URL</label>
+                <input
+                  type="url"
+                  name="imageUrl"
+                  value={eventForm.imageUrl}
+                  onChange={handleEventInputChange}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  value={eventForm.address}
+                  onChange={handleEventInputChange}
+                  placeholder="Event address (optional)"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Event Image URL</label>
-              <input
-                type="url"
-                name="imageUrl"
-                value={eventForm.imageUrl}
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+              <textarea
+                name="description"
+                value={eventForm.description}
                 onChange={handleEventInputChange}
-                placeholder="https://example.com/image.jpg"
+                placeholder="Event description..."
+                rows="3"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
 
-            {/* Step 3: Zone Configuration */}
+            {/* Step 3: Event Dates */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-semibold text-slate-700">Event Dates & Times</label>
+                <button
+                  type="button"
+                  onClick={addDate}
+                  className="px-4 py-2 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-md shadow-violet-500/30"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Date
+                </button>
+              </div>
+
+              {eventForm.dates.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 border border-slate-200 rounded-lg bg-slate-50">
+                  No dates added yet. Click "Add Date" to add event dates.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {eventForm.dates.map((date) => (
+                    <div
+                      key={date.id}
+                      className="grid grid-cols-12 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg"
+                    >
+                      <div className="col-span-5">
+                        <input
+                          type="date"
+                          value={date.date}
+                          onChange={(e) => updateDate(date.id, 'date', e.target.value)}
+                          required
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <input
+                          type="time"
+                          value={date.time}
+                          onChange={(e) => updateDate(date.id, 'time', e.target.value)}
+                          required
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <button
+                          type="button"
+                          onClick={() => removeDate(date.id)}
+                          className="w-full px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded text-sm font-semibold transition-colors"
+                        >
+                          <X className="w-4 h-4 mx-auto" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Step 4: Zone Configuration */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-semibold text-slate-700">Zone Configuration</label>
@@ -548,7 +965,7 @@ const SmartScheduler = () => {
                       key={zone.id}
                       className="grid grid-cols-12 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg"
                     >
-                      <div className="col-span-4">
+                      <div className="col-span-3">
                         <input
                           type="text"
                           placeholder="Zone Name (e.g., VIP)"
@@ -558,7 +975,7 @@ const SmartScheduler = () => {
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                         />
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-2">
                         <input
                           type="number"
                           placeholder="Capacity"
@@ -569,18 +986,29 @@ const SmartScheduler = () => {
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-slate-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                         />
                       </div>
-                      <div className="col-span-3">
+                      <div className="col-span-2">
                         <input
                           type="number"
-                          placeholder="Price (₹)"
-                          value={zone.price}
-                          onChange={(e) => updateZone(zone.id, 'price', e.target.value)}
+                          placeholder="Adult (₹)"
+                          value={zone.adultPrice}
+                          onChange={(e) => updateZone(zone.id, 'adultPrice', e.target.value)}
                           required
                           min="0"
                           className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-slate-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                         />
                       </div>
                       <div className="col-span-2">
+                        <input
+                          type="number"
+                          placeholder="Children (₹)"
+                          value={zone.childrenPrice}
+                          onChange={(e) => updateZone(zone.id, 'childrenPrice', e.target.value)}
+                          required
+                          min="0"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-slate-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="col-span-3">
                         <button
                           type="button"
                           onClick={() => removeZone(zone.id)}

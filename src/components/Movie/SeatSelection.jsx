@@ -1,10 +1,49 @@
 import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
-import { generateSeats, SEAT_ROWS } from '../../data/mockData';
+
+// Row configuration with pricing categories
+// A–D: Silver, E–K: Gold, L–M: VIP
+const ROW_DEFS = [
+  { id: 'A', type: 'silver' },
+  { id: 'B', type: 'silver' },
+  { id: 'C', type: 'silver' },
+  { id: 'D', type: 'silver' },
+  { id: 'E', type: 'gold' },
+  { id: 'F', type: 'gold' },
+  { id: 'G', type: 'gold' },
+  { id: 'H', type: 'gold' },
+  { id: 'I', type: 'gold' },
+  { id: 'J', type: 'gold' },
+  { id: 'K', type: 'gold' },
+  { id: 'L', type: 'vip' },
+  { id: 'M', type: 'vip' },
+];
 
 const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) => {
   const [selectedSeats, setSelectedSeats] = useState(initialSelectedSeats);
-  const seats = useMemo(() => generateSeats(), []);
+  const [zoom, setZoom] = useState(1); // 1 = 100%
+
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 1.6;
+  const ZOOM_STEP = 0.15;
+
+  // Generate a simple seat map without external mock data.
+  const seats = useMemo(() => {
+    const all = [];
+    ROW_DEFS.forEach(row => {
+      const seatCount = row.type === 'vip' ? 12 : 14;
+      for (let i = 1; i <= seatCount; i++) {
+        all.push({
+          id: `${row.id}${i}`,
+          row: row.id,
+          number: i,
+          type: row.type,
+          taken: false
+        });
+      }
+    });
+    return all;
+  }, []);
 
   const toggleSeat = (seatId, isTaken) => {
     if (isTaken) return;
@@ -19,25 +58,75 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
   const getSeatsByRow = (rowId) => {
     return seats.filter(seat => seat.row === rowId);
   };
+  // Owner-configured prices: standard covers Silver & Gold; VIP for VIP rows
+  const standardPrice = Number(
+    selectedShow?.standardPrice ?? selectedShow?.price ?? 0
+  );
+  const vipPrice = Number(
+    selectedShow?.vipPrice ?? selectedShow?.price ?? standardPrice
+  );
 
-  const totalPrice = selectedSeats.length * selectedShow.price;
+  const totalPrice = useMemo(() => {
+    return selectedSeats.reduce((sum, seatId) => {
+      const seat = seats.find((s) => s.id === seatId);
+      if (!seat) return sum;
+      if (seat.type === 'vip') {
+        return sum + vipPrice;
+      }
+      // silver & gold share the standard price from owner config
+      return sum + standardPrice;
+    }, 0);
+  }, [selectedSeats, seats, standardPrice, vipPrice]);
 
   return (
-    <div className="space-y-6 pb-24">
-      {/* Screen */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative"
+    <div className="space-y-4 pb-24">
+      {/* Zoom controls */}
+      <div className="flex justify-end items-center gap-3">
+        <span className="text-xs text-slate-500 font-medium">
+          {Math.round(zoom * 100)}%
+        </span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(MIN_ZOOM, z - ZOOM_STEP))}
+            disabled={zoom <= MIN_ZOOM}
+            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}
+            disabled={zoom >= MAX_ZOOM}
+            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      {/* Seat map: fixed logical layout, scrollable with zoom */}
+      <div
+        className="w-full overflow-auto"
+        style={{ maxHeight: 'calc(100vh - 320px)' }}
       >
-
-        <div className="text-center text-slate-500 text-sm font-medium uppercase tracking-wide">
-
-          <div className="relative mx-auto w-3/4 mb-6 perspective-[1000px]">
-
+        <div className="min-w-[900px] max-w-[1000px] mx-auto">
+          <div
+            className="inline-block origin-top-left space-y-6"
+            style={{ transform: `scale(${zoom})` }}
+          >
             {/* Screen */}
-            <div
-              className="
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative"
+            >
+              <div className="text-center text-slate-500 text-sm font-medium uppercase tracking-wide">
+                <div className="relative mx-auto w-3/4 mb-6 perspective-[1000px]">
+
+                  {/* Screen */}
+                  <div
+                    className="
               h-4
               bg-gradient-to-b from-blue-50 via-blue-100 to-blue-200
               rounded-[100%_100%_40%_40%]
@@ -45,112 +134,141 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
               border-t border-blue-100/60
               opacity-90
             "
-              style={{
-                transform: 'rotateX(-15deg) scale(1)',
-                boxShadow: '0 25px 30px -5px rgba(147, 197, 253, 0.45)'
-              }}
-            />
+                    style={{
+                      transform: 'rotateX(-15deg) scale(1)',
+                      boxShadow: '0 25px 30px -5px rgba(147, 197, 253, 0.45)'
+                    }}
+                  />
 
-            {/* Light Reflection */}
-            <div
-              className="
+                  {/* Light Reflection */}
+                  <div
+                    className="
               absolute top-2 left-1/2 -translate-x-1/2
               w-[80%] h-16
               bg-gradient-to-b from-blue-200/35 to-slate-900/0
               blur-2xl
               pointer-events-none
             "
-            />
+                  />
 
 
-            {/* Light Reflection */}
-            <div
-              className="
+                  {/* Light Reflection */}
+                  <div
+                    className="
                 absolute top-2 left-1/2 -translate-x-1/2
                 w-[80%] h-16
                 bg-gradient-to-b from-[#FFFFF0]/30 to-transparent
                 blur-2xl
                 pointer-events-none
               "
-            />
+                  />
 
-            {/* Label */}
-            <div className="text-center text-slate-400 text-xs font-bold uppercase tracking-[0.3em] mt-8 opacity-70">
-              Screen
-            </div>
-          </div>
-
-
-        </div>
-      </motion.div>
-
-      {/* Seat Legend */}
-      <div className="flex justify-center gap-8 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-slate-200 border border-slate-300 rounded flex items-center justify-center text-slate-600 text-xs font-medium">
-            A1
-          </div>
-          <span className="text-slate-600">Available</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-blue-500 border border-blue-600 rounded flex items-center justify-center text-white text-xs font-medium">
-            A2
-          </div>
-          <span className="text-slate-600">Selected</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-slate-400 border border-slate-500 rounded flex items-center justify-center text-slate-300 text-xs font-medium opacity-60">
-            A3
-          </div>
-          <span className="text-slate-600">Taken</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-amber-200 border border-amber-400 rounded flex items-center justify-center text-amber-700 text-xs font-medium">
-            L1
-          </div>
-          <span className="text-slate-600">VIP</span>
-        </div>
-      </div>
-
-      {/* Seat Map */}
-      <div className="space-y-2 max-w-6xl mx-auto">
-        {SEAT_ROWS.map((row, rowIndex) => {
-          const rowSeats = getSeatsByRow(row.id);
-          const isVIP = row.type === 'vip';
-
-          return (
-            <motion.div
-              key={row.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: rowIndex * 0.03 }}
-              className="flex items-center gap-3"
-            >
-              {/* Row Label */}
-              <div className={`w-10 text-center font-semibold text-sm ${isVIP ? 'text-amber-600' : 'text-slate-600'
-                }`}>
-                {row.id}
+                  {/* Label */}
+                  <div className="text-center text-slate-400 text-xs font-bold uppercase tracking-[0.3em] mt-8 opacity-70">
+                    Screen
+                  </div>
+                </div>
               </div>
+            </motion.div>
 
-              {/* Seats Grid */}
-              <div className="flex-1 flex items-center gap-1.5 justify-center flex-wrap">
-                {rowSeats.map((seat, index) => {
-                  const isSelected = selectedSeats.includes(seat.id);
-                  const isTaken = seat.taken;
+            {/* Seat Legend */}
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm">
+              {/* Available */}
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-slate-200 border border-slate-300 rounded flex items-center justify-center text-slate-600 text-xs font-medium">
+                  A1
+                </div>
+                <span className="text-slate-600">Available</span>
+              </div>
+              {/* Selected */}
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-blue-500 border border-blue-600 rounded flex items-center justify-center text-white text-xs font-medium">
+                  A2
+                </div>
+                <span className="text-slate-600">Selected</span>
+              </div>
+              {/* Taken */}
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-slate-600 border border-red-500 rounded flex items-center justify-center text-slate-200 text-xs font-medium relative">
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-red-300 text-lg leading-none">✕</span>
+                  </span>
+                </div>
+                <span className="text-slate-600">Taken</span>
+              </div>
+              {/* Silver */}
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-slate-200 border border-blue-400 rounded flex items-center justify-center text-slate-700 text-xs font-medium">
+                  D5
+                </div>
+                <span className="text-slate-600">Silver (₹{standardPrice})</span>
+              </div>
+              {/* Gold */}
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-slate-200 border border-yellow-400 rounded flex items-center justify-center text-yellow-800 text-xs font-medium">
+                  H5
+                </div>
+                <span className="text-slate-600">Gold (₹{standardPrice})</span>
+              </div>
+              {/* VIP */}
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-slate-200 border border-red-400 rounded flex items-center justify-center text-red-700 text-xs font-medium">
+                  L1
+                </div>
+                <span className="text-slate-600">VIP (₹{vipPrice})</span>
+              </div>
+            </div>
 
-                  // Create aisle gap after 7th seat (middle aisle)
-                  if (index === 7) {
-                    return (
-                      <div key={`aisle-${row.id}`} className="w-6" />
-                    );
-                  }
+            {/* Seat Map */}
+            <div className="space-y-2 max-w-6xl mx-auto">
+              {ROW_DEFS.map((row, rowIndex) => {
+                const rowSeats = getSeatsByRow(row.id);
+                const isVIP = row.type === 'vip';
+                const isGold = row.type === 'gold';
 
-                  return (
-                    <button
-                      key={seat.id}
-                      onClick={() => toggleSeat(seat.id, isTaken)}
-                      disabled={isTaken}
-                      className={`
+                return (
+                  <motion.div
+                    key={row.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: rowIndex * 0.03 }}
+                    className="flex items-center gap-3"
+                  >
+                    {/* Row Label */}
+                    <div
+                      className={`w-10 text-center font-semibold text-sm ${isVIP
+                        ? 'text-amber-600'
+                        : isGold
+                          ? 'text-yellow-600'
+                          : 'text-slate-600'
+                        }`}
+                    >
+                      {row.id}
+                    </div>
+
+                    {/* Seats Grid */}
+                    <div className="flex-1 flex items-center gap-1.5 justify-center flex-wrap">
+                      {rowSeats.map((seat, index) => {
+                        const isSelected = selectedSeats.includes(seat.id);
+                        const isTaken = seat.taken;
+
+                        // Create aisle gap after 7th seat (middle aisle)
+                        if (index === 7) {
+                          return (
+                            <div key={`aisle-${row.id}`} className="w-6" />
+                          );
+                        }
+
+                        const isVipSeat = seat.type === 'vip';
+                        const isGoldSeat = seat.type === 'gold';
+                        const isSilverSeat = seat.type === 'silver';
+
+                        return (
+                          <button
+                            key={seat.id}
+                            onClick={() => toggleSeat(seat.id, isTaken)}
+                            disabled={isTaken}
+                            className={`
                         w-10 h-10
                         text-xs font-medium
                         transition-all duration-200
@@ -158,31 +276,47 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
                         border-2
                         flex items-center justify-center
                         ${isTaken
-                          ? 'bg-slate-400 border-slate-500 text-slate-300 cursor-not-allowed opacity-60'
+                          ? 'bg-slate-600 border-red-500 text-slate-200 cursor-not-allowed relative'
                           : isSelected
                             ? 'bg-blue-500 border-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.6)] scale-110 ring-2 ring-blue-400 ring-offset-2'
-                            : isVIP
-                              ? 'bg-amber-200 border-amber-400 text-amber-900 hover:bg-amber-300 hover:scale-110 hover:shadow-[0_0_20px_rgba(251,191,36,0.6)] hover:border-amber-500 transition-all duration-300'
-                              : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300 hover:border-blue-400 hover:scale-110 hover:shadow-[0_0_20px_rgba(96,165,250,0.6)] transition-all duration-300'
-                        }
+                            : isVipSeat
+                              ? 'bg-slate-200 border-red-500 text-red-700 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(248,113,113,0.55)] hover:border-red-600 transition-all duration-300'
+                              : isGoldSeat
+                                ? 'bg-slate-200 border-yellow-400 text-yellow-800 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(250,204,21,0.55)] hover:border-yellow-500 transition-all duration-300'
+                                : isSilverSeat
+                                  ? 'bg-slate-200 border-blue-400 text-slate-700 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:border-blue-500 transition-all duration-300'
+                                  : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300 hover:border-blue-400 hover:scale-110 hover:shadow-[0_0_20px_rgba(96,165,250,0.6)] transition-all duration-300'
+                          }
                       `}
-                      title={`Seat ${seat.id}`}
-                    >
-                      {seat.number}
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+                            title={`Seat ${seat.id}`}
+                          >
+                            {isTaken ? (
+                              <>
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <span className="text-red-200 text-lg font-bold leading-none">✕</span>
+                                </span>
+                                <span className="opacity-0">{seat.number}</span>
+                              </>
+                            ) : (
+                              seat.number
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
 
-      {/* VIP Label */}
-      <div className="text-center pt-4">
-        <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm font-medium">
-          Rows L & M - VIP Recliner Seats
-        </span>
+            {/* Category Label */}
+            <div className="text-center pt-4">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm font-medium">
+                Rows A–D: Silver • Rows E–K: Gold • Rows L–M: VIP
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Sticky Footer */}

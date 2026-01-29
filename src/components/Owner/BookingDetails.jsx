@@ -1,20 +1,134 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, CheckCircle, Users, Search } from 'lucide-react';
 
 const BookingDetails = ({ item, onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterTime, setFilterTime] = useState('all'); // 'all', specific time
+  const [filterTime, setFilterTime] = useState('all'); // placeholder for future backend-based filter
+  const [bookings, setBookings] = useState([]);
+  const [eventZoneNameById, setEventZoneNameById] = useState({});
 
-  // Mock booking data
-  const bookings = [
-    { id: 'BK001', userName: 'Rajesh Kumar', seats: ['A1', 'A2'], date: '2024-03-15', time: '7:00 PM', status: 'confirmed' },
-    { id: 'BK002', userName: 'Priya Sharma', seats: ['B5', 'B6', 'B7'], date: '2024-03-15', time: '7:00 PM', status: 'confirmed' },
-    { id: 'BK003', userName: 'Amit Patel', seats: ['C10'], date: '2024-03-15', time: '7:00 PM', status: 'confirmed' },
-    { id: 'BK004', userName: 'Sneha Reddy', seats: ['D3', 'D4'], date: '2024-03-15', time: '10:00 PM', status: 'confirmed' },
-    { id: 'BK005', userName: 'Vikram Singh', seats: ['E8', 'E9'], date: '2024-03-16', time: '4:00 PM', status: 'confirmed' },
-    { id: 'BK006', userName: 'Ananya Desai', seats: ['F1', 'F2', 'F3', 'F4'], date: '2024-03-16', time: '7:00 PM', status: 'confirmed' },
-  ];
+  // If this is an event, load its eventConfig once so we can show Zone NAME instead of zoneId.
+  useEffect(() => {
+    const loadEventZones = async () => {
+      if (item?.type !== 'event' || !item?.id) {
+        setEventZoneNameById({});
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:8080/api/events/${item.id}`);
+        if (!res.ok) {
+          throw new Error('Failed to load event details');
+        }
+        const full = await res.json();
+        let parsed = {};
+        try {
+          parsed = full?.eventConfig ? JSON.parse(full.eventConfig) : {};
+        } catch {
+          parsed = {};
+        }
+
+        const zones = Array.isArray(parsed?.zones) ? parsed.zones : [];
+        const map = zones.reduce((acc, z) => {
+          if (z?.id) acc[String(z.id)] = z?.name || String(z.id);
+          return acc;
+        }, {});
+        setEventZoneNameById(map);
+      } catch (e) {
+        console.error('Error loading event zones:', e);
+        setEventZoneNameById({});
+      }
+    };
+
+    loadEventZones();
+  }, [item]);
+
+  useEffect(() => {
+    const loadBookings = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/api/bookings');
+        if (!res.ok) {
+          throw new Error('Failed to load bookings');
+        }
+        const data = await res.json();
+
+        // Filter bookings related to this item (movie or event)
+        const related = data.filter((b) => {
+          const movieId = item.tmdbMovieId ?? item.id;
+          if (item.type === 'movie') {
+            return (
+              b.type === 'MOVIE' &&
+              b.show &&
+              typeof b.show.tmdbMovieId === 'number' &&
+              b.show.tmdbMovieId === movieId
+            );
+          }
+          // event
+          return b.type === 'EVENT' && b.event && b.event.id === item.id;
+        });
+
+        const normalized = related.map((b) => {
+          let seats = [];
+          let ticketCount = 0;
+
+          try {
+            if (b.bookingDetails) {
+              const details = JSON.parse(b.bookingDetails);
+
+              // Movie bookings: seats array
+              if (b.type === 'MOVIE' && Array.isArray(details.seats)) {
+                seats = details.seats;
+                ticketCount = seats.length;
+              }
+
+              // Event bookings: selectedZones -> zone -> categories -> quantity
+              if (b.type === 'EVENT' && details.selectedZones && typeof details.selectedZones === 'object') {
+                const zoneEntries = Object.entries(details.selectedZones);
+                const zoneSummaries = zoneEntries.map(([zoneId, categories]) => {
+                  const totalForZone = Object.values(categories || {}).reduce(
+                    (sum, qty) => sum + (Number(qty) || 0),
+                    0
+                  );
+                  ticketCount += totalForZone;
+                  const zoneName = eventZoneNameById[String(zoneId)] || zoneId;
+                  return { label: `${zoneName}: ${totalForZone}`, total: totalForZone };
+                });
+
+                // For events, seats array will hold "Zone -> number of tickets" labels
+                seats = zoneSummaries
+                  .filter((z) => z.total > 0)
+                  .map((z) => z.label);
+              }
+            }
+          } catch {
+            seats = [];
+            ticketCount = 0;
+          }
+
+          // Use show date and time if available, otherwise fall back to bookedAt date
+          const showDate = b.show?.showDate || (b.bookedAt ? b.bookedAt.substring(0, 10) : '');
+          const showTime = b.show?.showTime || '';
+
+          return {
+            id: `BK${b.id}`,
+            userName: b.userName==null ? 'Guest' : b.userName,
+            seats,
+            ticketCount,
+            date: showDate,
+            time: showTime,
+            status: b.status || 'CONFIRMED',
+          };
+        });
+
+        setBookings(normalized);
+      } catch (e) {
+        console.error('Error loading bookings for owner details:', e);
+        setBookings([]);
+      }
+    };
+    loadBookings();
+  }, [item, eventZoneNameById]);
 
   // Filter bookings
   const filteredBookings = bookings.filter(booking => {
@@ -72,7 +186,9 @@ const BookingDetails = ({ item, onBack }) => {
               </span>
             </div>
             {item.type === 'movie' && (
-              <p className="text-slate-600 mb-4 text-sm sm:text-base">{item.genre.join(', ')} • {item.duration}</p>
+              <p className="text-slate-600 mb-4 text-sm sm:text-base">
+                {Array.isArray(item.genre) ? item.genre.join(', ') : ''}{item.duration ? ` • ${item.duration}` : ''}
+              </p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-lg p-3 sm:p-4">
@@ -80,14 +196,20 @@ const BookingDetails = ({ item, onBack }) => {
                 <p className="text-xl sm:text-2xl font-bold text-slate-800">{bookings.length}</p>
               </div>
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 sm:p-4">
-                <p className="text-xs sm:text-sm text-slate-600 mb-1">Total Seats</p>
+                <p className="text-xs sm:text-sm text-slate-600 mb-1">
+                  {item.type === 'movie' ? 'Total Seats' : 'Total Passes'}
+                </p>
                 <p className="text-xl sm:text-2xl font-bold text-slate-800">
-                  {bookings.reduce((sum, b) => sum + b.seats.length, 0)}
+                  {bookings.reduce(
+                    (sum, b) =>
+                      sum + (typeof b.ticketCount === 'number' ? b.ticketCount : b.seats.length),
+                    0
+                  )}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-3 sm:p-4">
                 <p className="text-xs sm:text-sm text-slate-600 mb-1">Revenue</p>
-                <p className="text-xl sm:text-2xl font-bold text-slate-800">₹{(bookings.length * 350).toLocaleString()}</p>
+                <p className="text-xl sm:text-2xl font-bold text-slate-800">₹{(bookings.length * 200).toLocaleString()}</p>
               </div>
             </div>
           </div>

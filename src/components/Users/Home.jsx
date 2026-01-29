@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Calendar, Search, SlidersHorizontal, Loader2 } from 'lucide-react';
-import { EVENTS } from '../../data/mockData';
 import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
 
 const Home = ({ onMovieSelect, onEventSelect, user }) => {
@@ -9,6 +8,7 @@ const Home = ({ onMovieSelect, onEventSelect, user }) => {
   const [sortBy, setSortBy] = useState('name'); // 'name', 'rating', 'latest'
   const [filterType, setFilterType] = useState('all'); // 'all', 'movies', 'events'
   const [movies, setMovies] = useState([]);
+  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -49,10 +49,37 @@ const Home = ({ onMovieSelect, onEventSelect, user }) => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery, filterType]);
 
+  // Load events from backend once
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const res = await fetch('http://localhost:8080/api/events');
+        if (!res.ok) {
+          throw new Error('Failed to load events');
+        }
+        const data = await res.json();
+        // Basic summary; full dates/zones will be fetched on selection
+        const normalized = data.map(e => ({
+          id: e.id,
+          type: 'event',
+          title: e.title,
+          poster: e.posterUrl,
+          venue: e.venue?.name || e.address || 'Event venue',
+          address: e.address,
+        }));
+        setEvents(normalized);
+      } catch (err) {
+        console.error('Error loading events:', err);
+        setEvents([]);
+      }
+    };
+    loadEvents();
+  }, []);
+
   // Combine and filter items
   const allItems = [
     ...movies.map(m => ({ ...m, type: 'movie' })),
-    ...EVENTS.map(e => ({ ...e, type: 'event' }))
+    ...events
   ];
 
   const filteredItems = allItems

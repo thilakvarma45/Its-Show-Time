@@ -26,7 +26,10 @@ const BookingWizard = ({
     if (!onStepChange) return false;
     if (targetStepId === currentStep) return false;
 
-    // Always allow going back to previous steps
+    // NEVER allow going back from ticket step (step 4)
+    if (currentStep === 4) return false;
+
+    // Allow going back to previous steps (but not from ticket)
     if (targetStepId < currentStep) return true;
 
     // Guards for moving forward via header clicks
@@ -64,7 +67,14 @@ const BookingWizard = ({
                 type="button"
                 onClick={() => {
                   if (isClickable) {
-                    onStepChange(step.id);
+                    // When going back via stepper, clear subsequent selections
+                    if (step.id < currentStep) {
+                      // This will trigger handleStepChange in AppContent which clears selections
+                      onStepChange(step.id);
+                    } else {
+                      // Going forward - normal behavior
+                      onStepChange(step.id);
+                    }
                   }
                 }}
                 className={`flex items-center flex-1 text-left focus:outline-none ${isClickable ? 'cursor-pointer' : 'cursor-default'
@@ -112,10 +122,19 @@ const BookingWizard = ({
       {/* ================= CONTENT ================= */}
       <div className="flex-1 overflow-y-auto px-8 py-8">
 
-        {/* 🔙 Back Button */}
+        {/* 🔙 Back Button - Never show on ticket step */}
         {currentStep > 1 && currentStep < 4 && (
           <button
-            onClick={onBack}
+            onClick={() => {
+              // Go back one step and clear subsequent selections
+              if (currentStep === 3) {
+                // Going back from payment to seats - clear seats
+                onStepChange(2);
+              } else if (currentStep === 2) {
+                // Going back from seats to theatres - clear show
+                onStepChange(1);
+              }
+            }}
             className="flex items-center gap-2 mb-6 text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -135,6 +154,7 @@ const BookingWizard = ({
             <TheatreSelection
               onTimeSelect={onTimeSelect}
               selectedShow={bookingDetails.selectedShow}
+              movieId={bookingDetails.selectedMovie?.id}
             />
           )}
 

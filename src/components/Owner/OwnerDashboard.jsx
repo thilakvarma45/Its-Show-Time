@@ -12,8 +12,8 @@ const OwnerDashboard = ({ user }) => {
   const [selectedShow, setSelectedShow] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Check if user is owner
-  if (!user || user.role !== 'owner') {
+  // Check if user is owner (support both 'owner' and 'OWNER')
+  if (!user || (user.role && user.role.toUpperCase() !== 'OWNER')) {
     return <AccessDenied />;
   }
 
@@ -150,7 +150,7 @@ const OwnerDashboard = ({ user }) => {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <MovieListings onSelectShow={handleSelectShow} />
+                <MovieListings onSelectShow={handleSelectShow} owner={user} />
               </motion.div>
             ) : activeView === 'VENUES' ? (
               <motion.div
@@ -160,7 +160,7 @@ const OwnerDashboard = ({ user }) => {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <VenueManagement />
+                <VenueManagement owner={user} />
               </motion.div>
             ) : (
               <motion.div
@@ -170,7 +170,7 @@ const OwnerDashboard = ({ user }) => {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <SmartScheduler />
+                <SmartScheduler owner={user} />
               </motion.div>
             )}
           </AnimatePresence>
