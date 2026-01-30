@@ -53,10 +53,10 @@ const AppContent = () => {
   // Shared state
   const [totalPrice, setTotalPrice] = useState(0);
   const [bookingId, setBookingId] = useState(null);
-  
+
   // Wishlist state
   const [wishlist, setWishlist] = useState([]);
-  
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -187,9 +187,13 @@ const AppContent = () => {
 
       let response;
       if (bookingType === 'MOVIE') {
+        const token = localStorage.getItem('token');
         response = await fetch('http://localhost:8080/api/bookings/movie', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             userId: user.id,
             showId: selectedShow?.showId || selectedShow?.id || null,
@@ -199,9 +203,13 @@ const AppContent = () => {
           }),
         });
       } else {
+        const token = localStorage.getItem('token');
         response = await fetch('http://localhost:8080/api/bookings/event', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             userId: user.id,
             eventId: selectedEvent?.id,
@@ -241,6 +249,7 @@ const AppContent = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     setView('HOME');
     setSelectedMovie(null);
     setSelectedEvent(null);
@@ -298,21 +307,21 @@ const AppContent = () => {
   const bookingDetails =
     bookingType === 'MOVIE'
       ? {
-          selectedMovie,
-          selectedShow,
-          selectedSeats,
-          totalPrice,
-          bookingType: 'MOVIE',
-          bookingId,
-        }
+        selectedMovie,
+        selectedShow,
+        selectedSeats,
+        totalPrice,
+        bookingType: 'MOVIE',
+        bookingId,
+      }
       : {
-          selectedEvent,
-          selectedDate,
-          selectedZones,
-          totalPrice,
-          bookingType: 'EVENT',
-          bookingId,
-        };
+        selectedEvent,
+        selectedDate,
+        selectedZones,
+        totalPrice,
+        bookingType: 'EVENT',
+        bookingId,
+      };
 
   return (
     <>
@@ -328,205 +337,34 @@ const AppContent = () => {
       />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? (
-              <Navigate to={user?.role === 'owner' || user?.role === 'OWNER' ? '/owner/dashboard' : '/home'} replace />
-            ) : (
-              <Login onAuthSuccess={handleAuthSuccess} />
-            )
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            isAuthenticated ? (
-              <Navigate to={user?.role === 'owner' || user?.role === 'OWNER' ? '/owner/dashboard' : '/home'} replace />
-            ) : (
-              <Register onAuthSuccess={handleAuthSuccess} />
-            )
-          }
-        />
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? (
+                <Navigate to={user?.role === 'owner' || user?.role === 'OWNER' ? '/owner/dashboard' : '/home'} replace />
+              ) : (
+                <Login onAuthSuccess={handleAuthSuccess} />
+              )
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              isAuthenticated ? (
+                <Navigate to={user?.role === 'owner' || user?.role === 'OWNER' ? '/owner/dashboard' : '/home'} replace />
+              ) : (
+                <Register onAuthSuccess={handleAuthSuccess} />
+              )
+            }
+          />
 
-        {/* Protected Routes */}
-        <Route
-          path="/home"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-cinema-light text-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                          <p className="text-xs text-slate-500 font-medium">Your Entertainment Hub</p>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
-                    </div>
-                  </div>
-                </header>
-                <Home 
-                  onMovieSelect={handleMovieSelect} 
-                  onEventSelect={handleEventSelect} 
-                  user={user}
-                  wishlist={wishlist}
-                  onToggleWishlist={handleToggleWishlist}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                />
-              </div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/movie/:id"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
-                    </div>
-                  </div>
-                </header>
-                <MovieDetails onBookNow={handleBookNow} />
-              </div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-cinema-light text-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
-                    </div>
-                  </div>
-                </header>
-                <Settings user={user} onBack={handleNavigateHome} onSave={handleSaveSettings} />
-              </div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/bookings"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-cinema-light text-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
-                    </div>
-                  </div>
-                </header>
-                <MyBookings user={user} onBack={handleNavigateHome} />
-              </div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/wishlist"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-cinema-light text-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
-                    </div>
-                  </div>
-                </header>
-                <Wishlist
-                  user={user}
-                  wishlist={wishlist}
-                  onBack={handleNavigateHome}
-                  onMovieSelect={handleMovieSelect}
-                  onEventSelect={handleEventSelect}
-                  onRemoveFromWishlist={handleRemoveFromWishlist}
-                />
-              </div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/help-support"
-          element={
-            <ProtectedRoute user={user}>
-              <HelpAndSupport onBack={handleNavigateHome} />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/owner/dashboard"
-          element={
-            <ProtectedRoute user={user}>
-              {user?.role === 'owner' || user?.role === 'OWNER' ? (
+          {/* Protected Routes */}
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute user={user}>
                 <div className="min-h-screen bg-cinema-light text-white">
                   <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
                     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
@@ -539,68 +377,239 @@ const AppContent = () => {
                             <span className="text-2xl">🎬</span>
                           </div>
                           <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                              ITS SHOW TIME
-                            </h1>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                            <p className="text-xs text-slate-500 font-medium">Your Entertainment Hub</p>
                           </div>
                         </button>
                         <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
                       </div>
                     </div>
                   </header>
-                  <OwnerDashboard user={user} />
+                  <Home
+                    onMovieSelect={handleMovieSelect}
+                    onEventSelect={handleEventSelect}
+                    user={user}
+                    wishlist={wishlist}
+                    onToggleWishlist={handleToggleWishlist}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                  />
                 </div>
-              ) : (
-                <Navigate to="/home" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Booking Routes */}
-        <Route
-          path="/booking/movie"
-          element={
-            <ProtectedRoute user={user}>
-              <BookingLayout
-                selectedMovie={location.state?.movie || selectedMovie}
-                currentStep={bookingStep}
-                bookingDetails={bookingDetails}
-                onBack={handleBack}
-                onTimeSelect={handleTimeSelect}
-                onSeatsSelect={handleSeatsSelect}
-                onPaymentComplete={handlePaymentComplete}
-                onNewBooking={handleNewBooking}
-                onStepChange={handleStepChange}
-              />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/movie/:id"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                          </div>
+                        </button>
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
+                    </div>
+                  </header>
+                  <MovieDetails onBookNow={handleBookNow} />
+                </div>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/booking/event"
-          element={
-            <ProtectedRoute user={user}>
-              <EventBookingLayout
-                selectedEvent={location.state?.event || selectedEvent}
-                currentStep={bookingStep}
-                bookingDetails={bookingDetails}
-                onBack={handleBack}
-                onDateSelect={handleDateSelect}
-                onZonesSelect={handleZonesSelect}
-                onPaymentComplete={handlePaymentComplete}
-                onNewBooking={handleNewBooking}
-                onStepChange={setBookingStep}
-              />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-cinema-light text-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                          </div>
+                        </button>
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
+                    </div>
+                  </header>
+                  <Settings user={user} onBack={handleNavigateHome} onSave={handleSaveSettings} />
+                </div>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Public Ticket View Route (accessible via QR code scan) */}
-        <Route path="/ticket/:id" element={<TicketView />} />
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-cinema-light text-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                          </div>
+                        </button>
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
+                    </div>
+                  </header>
+                  <MyBookings user={user} onBack={handleNavigateHome} />
+                </div>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Catch all - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+          <Route
+            path="/wishlist"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-cinema-light text-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                          </div>
+                        </button>
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
+                    </div>
+                  </header>
+                  <Wishlist
+                    user={user}
+                    wishlist={wishlist}
+                    onBack={handleNavigateHome}
+                    onMovieSelect={handleMovieSelect}
+                    onEventSelect={handleEventSelect}
+                    onRemoveFromWishlist={handleRemoveFromWishlist}
+                  />
+                </div>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/help-support"
+            element={
+              <ProtectedRoute user={user}>
+                <HelpAndSupport onBack={handleNavigateHome} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/owner/dashboard"
+            element={
+              <ProtectedRoute user={user}>
+                {user?.role === 'owner' || user?.role === 'OWNER' ? (
+                  <div className="min-h-screen bg-cinema-light text-white">
+                    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                        <div className="flex items-center justify-between h-16">
+                          <button
+                            onClick={handleNavigateHome}
+                            className="flex items-center gap-2 sm:gap-3 group"
+                          >
+                            <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                              <span className="text-2xl">🎬</span>
+                            </div>
+                            <div className="hidden sm:block">
+                              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                                ITS SHOW TIME
+                              </h1>
+                            </div>
+                          </button>
+                          <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                        </div>
+                      </div>
+                    </header>
+                    <OwnerDashboard user={user} />
+                  </div>
+                ) : (
+                  <Navigate to="/home" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Booking Routes */}
+          <Route
+            path="/booking/movie"
+            element={
+              <ProtectedRoute user={user}>
+                <BookingLayout
+                  selectedMovie={location.state?.movie || selectedMovie}
+                  currentStep={bookingStep}
+                  bookingDetails={bookingDetails}
+                  onBack={handleBack}
+                  onTimeSelect={handleTimeSelect}
+                  onSeatsSelect={handleSeatsSelect}
+                  onPaymentComplete={handlePaymentComplete}
+                  onNewBooking={handleNewBooking}
+                  onStepChange={handleStepChange}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/booking/event"
+            element={
+              <ProtectedRoute user={user}>
+                <EventBookingLayout
+                  selectedEvent={location.state?.event || selectedEvent}
+                  currentStep={bookingStep}
+                  bookingDetails={bookingDetails}
+                  onBack={handleBack}
+                  onDateSelect={handleDateSelect}
+                  onZonesSelect={handleZonesSelect}
+                  onPaymentComplete={handlePaymentComplete}
+                  onNewBooking={handleNewBooking}
+                  onStepChange={setBookingStep}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Public Ticket View Route (accessible via QR code scan) */}
+          <Route path="/ticket/:id" element={<TicketView />} />
+
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
     </>

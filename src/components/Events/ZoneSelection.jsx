@@ -18,8 +18,11 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
 
       try {
         const url = `http://localhost:8080/api/bookings/event/${event.id}/zone-availability?eventDateId=${selectedDate.id}`;
-        const response = await fetch(url);
-        
+        const token = localStorage.getItem('token');
+        const response = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
         if (response.ok) {
           const availability = await response.json();
           setZoneAvailability(availability || {});
@@ -38,7 +41,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
     // Check zone availability before adding
     if (delta > 0) {
       const availability = zoneAvailability[zoneName];
-      
+
       // Check if zone is completely full
       if (availability && availability.available === 0) {
         toast.error(`${zoneName} is completely sold out! No more passes available.`);
@@ -47,7 +50,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
 
       // Calculate current total passes for this zone (all categories combined)
       const currentZoneTotal = Object.values(cart[zoneName] || {}).reduce((sum, qty) => sum + qty, 0);
-      
+
       // Check if adding this pass would exceed the zone's remaining capacity
       if (availability && currentZoneTotal + delta > availability.available) {
         toast.warn(
@@ -138,24 +141,23 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
         {event.zones.map((zone, index) => {
           const availability = zoneAvailability[zone.name];
           const isZoneFull = availability && availability.available === 0;
-          
+
           // Calculate total passes in cart for this zone
           const currentZoneInCart = Object.values(cart[zone.name] || {}).reduce((sum, qty) => sum + qty, 0);
-          
+
           // Calculate remaining capacity
           // If no availability data yet, use zone capacity as fallback
           const totalAvailable = availability ? availability.available : (zone.capacity || 999);
           const remainingCapacity = totalAvailable - currentZoneInCart;
-          
+
           return (
             <motion.div
               key={zone.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className={`backdrop-blur-xl bg-white/5 rounded-2xl border-2 p-6 shadow-lg ${
-                isZoneFull ? 'opacity-60 border-red-400 bg-red-50/20' : zone.color
-              }`}
+              className={`backdrop-blur-xl bg-white/5 rounded-2xl border-2 p-6 shadow-lg ${isZoneFull ? 'opacity-60 border-red-400 bg-red-50/20' : zone.color
+                }`}
             >
               {/* Zone Header */}
               <div className="mb-4">
@@ -175,13 +177,12 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                   </p>
                   {availability && (
                     <div className="flex items-center gap-3">
-                      <p className={`text-sm font-semibold ${
-                        availability.available === 0 
-                          ? 'text-red-600' 
-                          : availability.available < 20 
-                            ? 'text-orange-600' 
+                      <p className={`text-sm font-semibold ${availability.available === 0
+                          ? 'text-red-600'
+                          : availability.available < 20
+                            ? 'text-orange-600'
                             : 'text-green-600'
-                      }`}>
+                        }`}>
                         {availability.available} available
                       </p>
                       {currentZoneInCart > 0 && (
@@ -198,22 +199,21 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
               <div className="space-y-3">
                 {zone.categories.map((category) => {
                   const quantity = getQuantity(zone.name, category.type);
-                  
+
                   // Check if we can add more passes
                   const canAddMore = !isZoneFull && remainingCapacity > 0;
-                  
+
                   return (
                     <div
                       key={category.type}
-                      className={`flex items-center justify-between p-3 rounded-lg backdrop-blur-sm ${
-                        isZoneFull ? 'bg-red-50/50 opacity-60' : 'bg-white/10'
-                      }`}
+                      className={`flex items-center justify-between p-3 rounded-lg backdrop-blur-sm ${isZoneFull ? 'bg-red-50/50 opacity-60' : 'bg-white/10'
+                        }`}
                     >
                       <div className="flex-1">
                         <div className="text-slate-900 font-semibold">{category.type}</div>
                         <div className="text-purple-600 font-bold">₹{category.price}</div>
                       </div>
-                      
+
                       {/* Quantity Stepper */}
                       <div className="flex items-center gap-3">
                         <button
@@ -229,11 +229,10 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                           type="button"
                           onClick={() => updateQuantity(zone.name, category.type, 1)}
                           disabled={!canAddMore}
-                          className={`w-8 h-8 rounded-lg text-white transition-all flex items-center justify-center shadow-md ${
-                            canAddMore
+                          className={`w-8 h-8 rounded-lg text-white transition-all flex items-center justify-center shadow-md ${canAddMore
                               ? 'bg-purple-600 hover:bg-purple-700 cursor-pointer'
                               : 'bg-slate-400 cursor-not-allowed'
-                          }`}
+                            }`}
                           title={!canAddMore ? (isZoneFull ? 'Zone is sold out' : 'Zone capacity reached with your current selection') : 'Add pass'}
                         >
                           <Plus className="w-4 h-4" />

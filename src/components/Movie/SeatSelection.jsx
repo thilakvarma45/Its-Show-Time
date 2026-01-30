@@ -38,8 +38,12 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
       }
 
       try {
+        const token = localStorage.getItem('token');
         const response = await fetch(
-          `http://localhost:8080/api/bookings/show/${selectedShow.showId}/blocked-seats`
+          `http://localhost:8080/api/bookings/show/${selectedShow.showId}/blocked-seats`,
+          {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }
         );
         if (response.ok) {
           const seats = await response.json();
@@ -322,17 +326,17 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
                         border-2
                         flex items-center justify-center
                         ${isTaken
-                          ? 'bg-slate-600 border-red-500 text-slate-200 cursor-not-allowed relative'
-                          : isSelected
-                            ? 'bg-blue-500 border-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.6)] scale-110 ring-2 ring-blue-400 ring-offset-2'
-                            : isVipSeat
-                              ? 'bg-slate-200 border-red-500 text-red-700 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(248,113,113,0.55)] hover:border-red-600 transition-all duration-300'
-                              : isGoldSeat
-                                ? 'bg-slate-200 border-yellow-400 text-yellow-800 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(250,204,21,0.55)] hover:border-yellow-500 transition-all duration-300'
-                                : isSilverSeat
-                                  ? 'bg-slate-200 border-blue-400 text-slate-700 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:border-blue-500 transition-all duration-300'
-                                  : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300 hover:border-blue-400 hover:scale-110 hover:shadow-[0_0_20px_rgba(96,165,250,0.6)] transition-all duration-300'
-                          }
+                                ? 'bg-slate-600 border-red-500 text-slate-200 cursor-not-allowed relative'
+                                : isSelected
+                                  ? 'bg-blue-500 border-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.6)] scale-110 ring-2 ring-blue-400 ring-offset-2'
+                                  : isVipSeat
+                                    ? 'bg-slate-200 border-red-500 text-red-700 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(248,113,113,0.55)] hover:border-red-600 transition-all duration-300'
+                                    : isGoldSeat
+                                      ? 'bg-slate-200 border-yellow-400 text-yellow-800 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(250,204,21,0.55)] hover:border-yellow-500 transition-all duration-300'
+                                      : isSilverSeat
+                                        ? 'bg-slate-200 border-blue-400 text-slate-700 hover:bg-slate-200 hover:scale-110 hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:border-blue-500 transition-all duration-300'
+                                        : 'bg-slate-200 border-slate-300 text-slate-600 hover:bg-slate-300 hover:border-blue-400 hover:scale-110 hover:shadow-[0_0_20px_rgba(96,165,250,0.6)] transition-all duration-300'
+                              }
                       `}
                             title={`Seat ${seat.id}`}
                           >

@@ -46,8 +46,12 @@ const Settings = ({ user, onBack, onSave }) => {
       const formData = new FormData();
       formData.append('image', profileImageFile);
 
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:8080/api/upload/profile/${user.id}`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -68,7 +72,7 @@ const Settings = ({ user, onBack, onSave }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     let updatedData = { ...formData };
 
     // Upload profile image if selected
@@ -81,9 +85,13 @@ const Settings = ({ user, onBack, onSave }) => {
 
     // Update user profile via API
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:8080/api/auth/user/${user.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(updatedData),
       });
 
@@ -262,11 +270,10 @@ const Settings = ({ user, onBack, onSave }) => {
             <button
               type="submit"
               disabled={!isEditing || uploadingImage}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
-                isEditing && !uploadingImage
+              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${isEditing && !uploadingImage
                   ? 'bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-lg shadow-violet-500/30'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-              }`}
+                }`}
             >
               <Save className="w-5 h-5" />
               {uploadingImage ? 'Uploading...' : 'Save Changes'}

@@ -18,7 +18,10 @@ const MyBookings = ({ user, onBack }) => {
           setLoading(false);
           return;
         }
-        const res = await fetch(`http://localhost:8080/api/bookings/user/${user.id}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:8080/api/bookings/user/${user.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!res.ok) {
           throw new Error('Failed to load bookings');
         }
@@ -60,7 +63,7 @@ const MyBookings = ({ user, onBack }) => {
                   title = `Movie #${b.show.tmdbMovieId}`;
                 }
               }
-              
+
               // Get show details
               time = b.show.showTime || '';
               date = formatDate(b.show.showDate) || date;
@@ -73,11 +76,11 @@ const MyBookings = ({ user, onBack }) => {
             title = b.event?.title || 'Event';
             poster = b.event?.posterUrl || poster;
             venue = b.event?.venue?.name || 'Event Venue';
-            
+
             // Parse event zones/passes
             if (details.selectedZones) {
               seats = Object.entries(details.selectedZones).flatMap(([zoneId, categories]) => {
-                return Object.entries(categories).map(([cat, qty]) => 
+                return Object.entries(categories).map(([cat, qty]) =>
                   `${cat}: ${qty}`
                 );
               });

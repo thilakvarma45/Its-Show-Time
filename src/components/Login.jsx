@@ -36,12 +36,17 @@ const Login = ({ onAuthSuccess }) => {
         throw new Error('Invalid email or password');
       }
       const user = await res.json();
-      
+
       // Store remember me preference
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
       }
-      
+
+      // Save token to localStorage
+      if (user.token) {
+        localStorage.setItem('token', user.token);
+      }
+
       onAuthSuccess(user);
     } catch (err) {
       console.error(err);
@@ -85,7 +90,7 @@ const Login = ({ onAuthSuccess }) => {
               >
                 <Film className="w-8 h-8 text-white" />
               </motion.div>
-              
+
               <motion.h1
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -94,7 +99,7 @@ const Login = ({ onAuthSuccess }) => {
               >
                 ITS SHOW TIME
               </motion.h1>
-              
+
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

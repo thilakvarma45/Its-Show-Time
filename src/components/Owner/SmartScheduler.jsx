@@ -12,7 +12,7 @@ const SmartScheduler = ({ owner }) => {
   const [movieSearchQuery, setMovieSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreMovies, setHasMoreMovies] = useState(true);
-  
+
   // Movie scheduling state
   const [movieForm, setMovieForm] = useState({
     venueId: '',
@@ -70,7 +70,7 @@ const SmartScheduler = ({ owner }) => {
   // Load more movies function
   const loadMoreMovies = async () => {
     if (loadingMovies || !hasMoreMovies) return;
-    
+
     setLoadingMovies(true);
     try {
       let result;
@@ -100,7 +100,7 @@ const SmartScheduler = ({ owner }) => {
     dates: [],
     zones: []
   });
-  
+
   const [eventImageFile, setEventImageFile] = useState(null);
   const [eventImagePreview, setEventImagePreview] = useState(null);
   const [uploadingEventImage, setUploadingEventImage] = useState(false);
@@ -129,7 +129,12 @@ const SmartScheduler = ({ owner }) => {
           setVenues([]);
           return;
         }
-        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (!res.ok) {
           throw new Error('Failed to load venues');
         }
@@ -250,9 +255,13 @@ const SmartScheduler = ({ owner }) => {
         vipPrice: Number(movieForm.vipPrice || 0),
       };
 
+      const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:8080/api/schedules', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
 
@@ -310,8 +319,12 @@ const SmartScheduler = ({ owner }) => {
       const formData = new FormData();
       formData.append('image', eventImageFile);
 
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:8080/api/upload/event', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -358,10 +371,10 @@ const SmartScheduler = ({ owner }) => {
   const addZone = () => {
     setEventForm(prev => ({
       ...prev,
-      zones: [...prev.zones, { 
-        id: `zone_${Date.now()}`, 
-        name: '', 
-        capacity: '', 
+      zones: [...prev.zones, {
+        id: `zone_${Date.now()}`,
+        name: '',
+        capacity: '',
         adultPrice: '',
         childrenPrice: ''
       }]
@@ -386,7 +399,7 @@ const SmartScheduler = ({ owner }) => {
 
   const handleEventSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!owner?.id) {
       toast.error('Owner information is missing. Please refresh and try again.');
       return;
@@ -429,11 +442,11 @@ const SmartScheduler = ({ owner }) => {
         'border-green-500',
         'border-red-500'
       ];
-      
+
       const eventConfig = {
         dates: eventForm.dates.map((d, idx) => ({
           id: d.id || `date_${idx + 1}`,
-          label: d.date && d.time 
+          label: d.date && d.time
             ? `${new Date(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} | ${d.time}`
             : d.date || `Date ${idx + 1}`,
           date: d.date,
@@ -451,9 +464,13 @@ const SmartScheduler = ({ owner }) => {
         }))
       };
 
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:8080/api/events', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           ownerId: owner.id,
           venueId: Number(eventForm.venueId),
@@ -474,7 +491,7 @@ const SmartScheduler = ({ owner }) => {
 
       const data = await response.json();
       toast.success(`Event "${eventForm.eventName}" created successfully!`);
-      
+
       // Reset form and image states
       setEventImageFile(null);
       setEventImagePreview(null);
@@ -505,22 +522,20 @@ const SmartScheduler = ({ owner }) => {
       <div className="flex gap-1 sm:gap-2 border-b border-slate-200 overflow-x-auto">
         <button
           onClick={() => setActiveTab('MOVIE')}
-          className={`px-4 sm:px-6 py-2.5 sm:py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-sm sm:text-base ${
-            activeTab === 'MOVIE'
+          className={`px-4 sm:px-6 py-2.5 sm:py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-sm sm:text-base ${activeTab === 'MOVIE'
               ? 'border-violet-500 text-violet-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
+            }`}
         >
           <Film className="w-4 h-4 sm:w-5 sm:h-5 inline-block mr-1.5 sm:mr-2" />
           <span className="hidden sm:inline">Schedule </span>Movie
         </button>
         <button
           onClick={() => setActiveTab('EVENT')}
-          className={`px-4 sm:px-6 py-2.5 sm:py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-sm sm:text-base ${
-            activeTab === 'EVENT'
+          className={`px-4 sm:px-6 py-2.5 sm:py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-sm sm:text-base ${activeTab === 'EVENT'
               ? 'border-violet-500 text-violet-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
+            }`}
         >
           <Calendar className="w-4 h-4 sm:w-5 sm:h-5 inline-block mr-1.5 sm:mr-2" />
           <span className="hidden sm:inline">Create </span>Event
@@ -557,7 +572,7 @@ const SmartScheduler = ({ owner }) => {
             {/* Step 2: Search and Select Movie */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Search and Select Movie</label>
-              
+
               {/* Movie Search Input */}
               <div className="relative mb-3">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -599,9 +614,9 @@ const SmartScheduler = ({ owner }) => {
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 >
                   <option value="">
-                    {movieSearchQuery 
-                      ? movies.length === 0 
-                        ? 'No movies found. Try a different search.' 
+                    {movieSearchQuery
+                      ? movies.length === 0
+                        ? 'No movies found. Try a different search.'
                         : `Select from ${movies.length} result${movies.length !== 1 ? 's' : ''}...`
                       : 'Select a movie from popular movies...'}
                   </option>
@@ -612,11 +627,11 @@ const SmartScheduler = ({ owner }) => {
                   ))}
                 </select>
               )}
-              
+
               {/* Helper text and Load More */}
               <div className="mt-2 flex items-center justify-between">
                 <p className="text-xs text-slate-500">
-                  {movieSearchQuery 
+                  {movieSearchQuery
                     ? `Found ${movies.length} movie${movies.length !== 1 ? 's' : ''} matching "${movieSearchQuery}"`
                     : `Showing ${movies.length} popular movies. Type above to search for specific movies.`}
                 </p>
@@ -651,33 +666,30 @@ const SmartScheduler = ({ owner }) => {
                 <button
                   type="button"
                   onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: '7' } })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                    movieForm.schedulePreset === '7'
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${movieForm.schedulePreset === '7'
                       ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
-                  }`}
+                    }`}
                 >
                   Next 7 days
                 </button>
                 <button
                   type="button"
                   onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: '14' } })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                    movieForm.schedulePreset === '14'
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${movieForm.schedulePreset === '14'
                       ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
-                  }`}
+                    }`}
                 >
                   Next 14 days
                 </button>
                 <button
                   type="button"
                   onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: 'custom' } })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                    movieForm.schedulePreset === 'custom'
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${movieForm.schedulePreset === 'custom'
                       ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
-                  }`}
+                    }`}
                 >
                   Custom calendar
                 </button>
@@ -710,9 +722,8 @@ const SmartScheduler = ({ owner }) => {
                     onChange={handleMovieInputChange}
                     required
                     disabled={movieForm.schedulePreset !== 'custom'}
-                    className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
-                      movieForm.schedulePreset !== 'custom' ? 'opacity-70 cursor-not-allowed' : ''
-                    }`}
+                    className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${movieForm.schedulePreset !== 'custom' ? 'opacity-70 cursor-not-allowed' : ''
+                      }`}
                   />
                   {movieForm.schedulePreset !== 'custom' && movieForm.startDate && movieForm.endDate && (
                     <p className="mt-1 text-[11px] text-slate-500">
@@ -728,7 +739,7 @@ const SmartScheduler = ({ owner }) => {
             {/* Step 4: Smart Timing Picker */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-3">Select Show Times</label>
-              
+
               {/* Suggested Slots */}
               <div className="mb-4">
                 <p className="text-xs text-slate-600 mb-2 font-medium">Suggested Slots:</p>
@@ -739,11 +750,10 @@ const SmartScheduler = ({ owner }) => {
                       type="button"
                       onClick={() => addSuggestedSlot(slot)}
                       disabled={movieForm.confirmedShows.includes(slot)}
-                      className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${
-                        movieForm.confirmedShows.includes(slot)
+                      className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${movieForm.confirmedShows.includes(slot)
                           ? 'bg-violet-100 border-violet-300 text-violet-700 cursor-not-allowed'
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-violet-300 hover:text-violet-600'
-                      }`}
+                        }`}
                     >
                       {slot}
                     </button>
@@ -922,9 +932,9 @@ const SmartScheduler = ({ owner }) => {
                   </label>
                   {eventImagePreview && (
                     <div className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-violet-200">
-                      <img 
-                        src={eventImagePreview} 
-                        alt="Preview" 
+                      <img
+                        src={eventImagePreview}
+                        alt="Preview"
                         className="w-full h-full object-cover"
                       />
                       <button
