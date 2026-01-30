@@ -3,11 +3,13 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { AnimatePresence } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Search } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Register from './components/Register';
 import Home from './components/Users/Home';
 import MovieDetails from './components/Users/MovieDetails';
+import EventDetails from './components/Users/EventDetails';
 import BookingLayout from './components/Movie/BookingLayout';
 import EventBookingLayout from './components/Events/EventBookingLayout';
 import OwnerDashboard from './components/Owner/OwnerDashboard';
@@ -53,10 +55,10 @@ const AppContent = () => {
   // Shared state
   const [totalPrice, setTotalPrice] = useState(0);
   const [bookingId, setBookingId] = useState(null);
-  
+
   // Wishlist state
   const [wishlist, setWishlist] = useState([]);
-  
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -73,9 +75,16 @@ const AppContent = () => {
     navigate('/booking/movie', { state: { movie } });
   };
 
-  const handleEventSelect = async (eventSummary) => {
+  // Navigate to event details page
+  const handleEventSelect = (eventSummary) => {
+    navigate(`/event/${eventSummary.id}`);
+  };
+
+  // Book event from EventDetails page
+  const handleEventBookNow = async (event) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/events/${eventSummary.id}`);
+      // Fetch full event details if not already complete
+      const res = await fetch(`http://localhost:8080/api/events/${event.id}`);
       if (!res.ok) {
         throw new Error('Failed to load event details');
       }
@@ -92,8 +101,8 @@ const AppContent = () => {
         id: full.id,
         title: full.title,
         poster: full.posterUrl,
-        venue: full.venue?.name || full.address || eventSummary.venue,
-        address: full.address || eventSummary.address,
+        venue: full.venue?.name || full.address || event.venue,
+        address: full.address || event.address,
         dates: parsedConfig.dates || [],
         zones: parsedConfig.zones || [],
       };
@@ -298,21 +307,21 @@ const AppContent = () => {
   const bookingDetails =
     bookingType === 'MOVIE'
       ? {
-          selectedMovie,
-          selectedShow,
-          selectedSeats,
-          totalPrice,
-          bookingType: 'MOVIE',
-          bookingId,
-        }
+        selectedMovie,
+        selectedShow,
+        selectedSeats,
+        totalPrice,
+        bookingType: 'MOVIE',
+        bookingId,
+      }
       : {
-          selectedEvent,
-          selectedDate,
-          selectedZones,
-          totalPrice,
-          bookingType: 'EVENT',
-          bookingId,
-        };
+        selectedEvent,
+        selectedDate,
+        selectedZones,
+        totalPrice,
+        bookingType: 'EVENT',
+        bookingId,
+      };
 
   return (
     <>
@@ -328,205 +337,155 @@ const AppContent = () => {
       />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? (
-              <Navigate to={user?.role === 'owner' || user?.role === 'OWNER' ? '/owner/dashboard' : '/home'} replace />
-            ) : (
-              <Login onAuthSuccess={handleAuthSuccess} />
-            )
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            isAuthenticated ? (
-              <Navigate to={user?.role === 'owner' || user?.role === 'OWNER' ? '/owner/dashboard' : '/home'} replace />
-            ) : (
-              <Register onAuthSuccess={handleAuthSuccess} />
-            )
-          }
-        />
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? (
+                <Navigate to={user?.role === 'owner' || user?.role === 'OWNER' ? '/owner/dashboard' : '/home'} replace />
+              ) : (
+                <Login onAuthSuccess={handleAuthSuccess} />
+              )
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              isAuthenticated ? (
+                <Navigate to={user?.role === 'owner' || user?.role === 'OWNER' ? '/owner/dashboard' : '/home'} replace />
+              ) : (
+                <Register onAuthSuccess={handleAuthSuccess} />
+              )
+            }
+          />
 
-        {/* Protected Routes */}
-        <Route
-          path="/home"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-cinema-light text-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
+          {/* Protected Routes */}
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-cinema-light text-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16 gap-4">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group flex-shrink-0"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                            <p className="text-xs text-slate-500 font-medium">Your Entertainment Hub</p>
+                          </div>
+                        </button>
+
+                        {/* Search Bar in Header */}
+                        <div className="flex-1 max-w-xl">
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <Search className="w-5 h-5 text-slate-400" />
+                            </div>
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder="Search movies, events..."
+                              className="w-full pl-10 pr-10 py-2.5 bg-slate-100 border border-slate-200 rounded-full text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all text-sm"
+                            />
+                            {searchQuery && (
+                              <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                <span className="text-lg font-light">×</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                          <p className="text-xs text-slate-500 font-medium">Your Entertainment Hub</p>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
                     </div>
-                  </div>
-                </header>
-                <Home 
-                  onMovieSelect={handleMovieSelect} 
-                  onEventSelect={handleEventSelect} 
-                  user={user}
-                  wishlist={wishlist}
-                  onToggleWishlist={handleToggleWishlist}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                />
-              </div>
-            </ProtectedRoute>
-          }
-        />
+                  </header>
+                  <Home
+                    onMovieSelect={handleMovieSelect}
+                    onEventSelect={handleEventSelect}
+                    user={user}
+                    wishlist={wishlist}
+                    onToggleWishlist={handleToggleWishlist}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                  />
+                </div>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/movie/:id"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+          <Route
+            path="/movie/:id"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                          </div>
+                        </button>
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
                     </div>
-                  </div>
-                </header>
-                <MovieDetails onBookNow={handleBookNow} />
-              </div>
-            </ProtectedRoute>
-          }
-        />
+                  </header>
+                  <MovieDetails onBookNow={handleBookNow} />
+                </div>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-cinema-light text-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+          <Route
+            path="/event/:id"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                          </div>
+                        </button>
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
                     </div>
-                  </div>
-                </header>
-                <Settings user={user} onBack={handleNavigateHome} onSave={handleSaveSettings} />
-              </div>
-            </ProtectedRoute>
-          }
-        />
+                  </header>
+                  <EventDetails onBookNow={handleEventBookNow} />
+                </div>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/bookings"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-cinema-light text-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
-                    </div>
-                  </div>
-                </header>
-                <MyBookings user={user} onBack={handleNavigateHome} />
-              </div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/wishlist"
-          element={
-            <ProtectedRoute user={user}>
-              <div className="min-h-screen bg-cinema-light text-white">
-                <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                  <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
-                      <button
-                        onClick={handleNavigateHome}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                          <span className="text-2xl">🎬</span>
-                        </div>
-                        <div className="hidden sm:block">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                        </div>
-                      </button>
-                      <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
-                    </div>
-                  </div>
-                </header>
-                <Wishlist
-                  user={user}
-                  wishlist={wishlist}
-                  onBack={handleNavigateHome}
-                  onMovieSelect={handleMovieSelect}
-                  onEventSelect={handleEventSelect}
-                  onRemoveFromWishlist={handleRemoveFromWishlist}
-                />
-              </div>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/help-support"
-          element={
-            <ProtectedRoute user={user}>
-              <HelpAndSupport onBack={handleNavigateHome} />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/owner/dashboard"
-          element={
-            <ProtectedRoute user={user}>
-              {user?.role === 'owner' || user?.role === 'OWNER' ? (
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute user={user}>
                 <div className="min-h-screen bg-cinema-light text-white">
                   <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
                     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
@@ -539,68 +498,172 @@ const AppContent = () => {
                             <span className="text-2xl">🎬</span>
                           </div>
                           <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                              ITS SHOW TIME
-                            </h1>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
                           </div>
                         </button>
                         <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
                       </div>
                     </div>
                   </header>
-                  <OwnerDashboard user={user} />
+                  <Settings user={user} onBack={handleNavigateHome} onSave={handleSaveSettings} />
                 </div>
-              ) : (
-                <Navigate to="/home" replace />
-              )}
-            </ProtectedRoute>
-          }
-        />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Booking Routes */}
-        <Route
-          path="/booking/movie"
-          element={
-            <ProtectedRoute user={user}>
-              <BookingLayout
-                selectedMovie={location.state?.movie || selectedMovie}
-                currentStep={bookingStep}
-                bookingDetails={bookingDetails}
-                onBack={handleBack}
-                onTimeSelect={handleTimeSelect}
-                onSeatsSelect={handleSeatsSelect}
-                onPaymentComplete={handlePaymentComplete}
-                onNewBooking={handleNewBooking}
-                onStepChange={handleStepChange}
-              />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-cinema-light text-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                          </div>
+                        </button>
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
+                    </div>
+                  </header>
+                  <MyBookings user={user} onBack={handleNavigateHome} />
+                </div>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/booking/event"
-          element={
-            <ProtectedRoute user={user}>
-              <EventBookingLayout
-                selectedEvent={location.state?.event || selectedEvent}
-                currentStep={bookingStep}
-                bookingDetails={bookingDetails}
-                onBack={handleBack}
-                onDateSelect={handleDateSelect}
-                onZonesSelect={handleZonesSelect}
-                onPaymentComplete={handlePaymentComplete}
-                onNewBooking={handleNewBooking}
-                onStepChange={setBookingStep}
-              />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/wishlist"
+            element={
+              <ProtectedRoute user={user}>
+                <div className="min-h-screen bg-cinema-light text-white">
+                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                      <div className="flex items-center justify-between h-16">
+                        <button
+                          onClick={handleNavigateHome}
+                          className="flex items-center gap-2 sm:gap-3 group"
+                        >
+                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                            <span className="text-2xl">🎬</span>
+                          </div>
+                          <div className="hidden sm:block">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                          </div>
+                        </button>
+                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                      </div>
+                    </div>
+                  </header>
+                  <Wishlist
+                    user={user}
+                    wishlist={wishlist}
+                    onBack={handleNavigateHome}
+                    onMovieSelect={handleMovieSelect}
+                    onEventSelect={handleEventSelect}
+                    onRemoveFromWishlist={handleRemoveFromWishlist}
+                  />
+                </div>
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Public Ticket View Route (accessible via QR code scan) */}
-        <Route path="/ticket/:id" element={<TicketView />} />
+          <Route
+            path="/help-support"
+            element={
+              <ProtectedRoute user={user}>
+                <HelpAndSupport onBack={handleNavigateHome} />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Catch all - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+          <Route
+            path="/owner/dashboard"
+            element={
+              <ProtectedRoute user={user}>
+                {user?.role === 'owner' || user?.role === 'OWNER' ? (
+                  <div className="min-h-screen bg-cinema-light text-white">
+                    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+                      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+                        <div className="flex items-center justify-between h-16">
+                          <button
+                            onClick={handleNavigateHome}
+                            className="flex items-center gap-2 sm:gap-3 group"
+                          >
+                            <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
+                              <span className="text-2xl">🎬</span>
+                            </div>
+                            <div className="hidden sm:block">
+                              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                                ITS SHOW TIME
+                              </h1>
+                            </div>
+                          </button>
+                          <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
+                        </div>
+                      </div>
+                    </header>
+                    <OwnerDashboard user={user} />
+                  </div>
+                ) : (
+                  <Navigate to="/home" replace />
+                )}
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Booking Routes */}
+          <Route
+            path="/booking/movie"
+            element={
+              <ProtectedRoute user={user}>
+                <BookingLayout
+                  selectedMovie={location.state?.movie || selectedMovie}
+                  currentStep={bookingStep}
+                  bookingDetails={bookingDetails}
+                  onBack={handleBack}
+                  onTimeSelect={handleTimeSelect}
+                  onSeatsSelect={handleSeatsSelect}
+                  onPaymentComplete={handlePaymentComplete}
+                  onNewBooking={handleNewBooking}
+                  onStepChange={handleStepChange}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/booking/event"
+            element={
+              <ProtectedRoute user={user}>
+                <EventBookingLayout
+                  selectedEvent={location.state?.event || selectedEvent}
+                  currentStep={bookingStep}
+                  bookingDetails={bookingDetails}
+                  onBack={handleBack}
+                  onDateSelect={handleDateSelect}
+                  onZonesSelect={handleZonesSelect}
+                  onPaymentComplete={handlePaymentComplete}
+                  onNewBooking={handleNewBooking}
+                  onStepChange={setBookingStep}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Public Ticket View Route (accessible via QR code scan) */}
+          <Route path="/ticket/:id" element={<TicketView />} />
+
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
     </>

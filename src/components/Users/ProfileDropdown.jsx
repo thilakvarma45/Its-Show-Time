@@ -20,7 +20,7 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
 
   // Filter menu items based on user role
   const isOwner = user?.role === 'owner' || user?.role === 'OWNER';
-  
+
   const allMenuItems = [
     { icon: Settings, label: 'Settings', action: 'settings', roles: ['user', 'owner'] },
     { icon: Bookmark, label: 'My Bookings', action: 'bookings', roles: ['user'] },
@@ -74,7 +74,7 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
             {user?.name || 'User'}
           </p>
           <p className="text-xs text-slate-500 font-medium">
-            {user?.role === 'owner' ? 'Producer' : 'Movie Lover'}
+            {user?.role?.toLowerCase() === 'owner' ? 'Host' : 'Movie Lover'}
           </p>
         </div>
 

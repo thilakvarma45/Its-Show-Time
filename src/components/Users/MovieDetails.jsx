@@ -25,6 +25,11 @@ const MovieDetails = ({ onBookNow }) => {
   const [hasShows, setHasShows] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
 
+  // Scroll to top when component mounts or movie ID changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [id]);
+
   useEffect(() => {
     const loadMovie = async () => {
       setLoading(true);
@@ -49,7 +54,7 @@ const MovieDetails = ({ onBookNow }) => {
   useEffect(() => {
     const checkMovieShows = async () => {
       if (!movie || !movie.id) return;
-      
+
       try {
         // Check if this movie has any shows scheduled
         const res = await fetch('http://localhost:8080/api/shows/summary');
@@ -68,7 +73,7 @@ const MovieDetails = ({ onBookNow }) => {
         setHasShows(true);
       }
     };
-    
+
     checkMovieShows();
   }, [movie]);
 
@@ -244,11 +249,10 @@ const MovieDetails = ({ onBookNow }) => {
                   transition={{ delay: 0.7 }}
                   onClick={handleBookNow}
                   disabled={!hasShows}
-                  className={`px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg flex items-center gap-2 ${
-                    hasShows
+                  className={`px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg flex items-center gap-2 ${hasShows
                       ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
                       : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <Film className="w-5 h-5" />
                   {hasShows ? 'Book Now' : 'Not Available'}
@@ -432,11 +436,10 @@ const MovieDetails = ({ onBookNow }) => {
               <button
                 onClick={handleBookNow}
                 disabled={!hasShows}
-                className={`w-full px-6 py-3 rounded-lg font-bold transition-all shadow-md ${
-                  hasShows
+                className={`w-full px-6 py-3 rounded-lg font-bold transition-all shadow-md ${hasShows
                     ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
                     : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 {hasShows ? 'Book Tickets' : 'Not Available'}
               </button>

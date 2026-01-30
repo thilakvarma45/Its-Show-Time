@@ -28,24 +28,24 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
       try {
         const res = await fetch('http://localhost:8080/api/venues');
         if (!res.ok) return;
-        
+
         const venues = await res.json();
         const theatreVenues = venues.filter(
           (v) => (v.type || '').toString().toUpperCase() === 'THEATRE'
         );
 
         const datesSet = new Set();
-        
+
         // Check each date for shows
         await Promise.all(
           generatedDates.map(async (date) => {
             const hasShowsForDate = await Promise.all(
               theatreVenues.map(async (venue) => {
                 try {
-                  const url = movieId 
+                  const url = movieId
                     ? `http://localhost:8080/api/shows/venue/${venue.id}?date=${date.fullDate}&movieId=${movieId}`
                     : `http://localhost:8080/api/shows/venue/${venue.id}?date=${date.fullDate}`;
-                  
+
                   const showRes = await fetch(url);
                   if (!showRes.ok) return false;
                   const shows = await showRes.json();
@@ -55,13 +55,13 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
                 }
               })
             );
-            
+
             if (hasShowsForDate.some(has => has)) {
               datesSet.add(date.fullDate);
             }
           })
         );
-        
+
         setDatesWithShows(datesSet);
         setAllDatesLoaded(true);
       } catch (err) {
@@ -69,7 +69,7 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
         setAllDatesLoaded(true);
       }
     };
-    
+
     loadAllDates();
   }, [movieId]);
 
@@ -94,10 +94,10 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
         const withShows = await Promise.all(
           theatreVenues.map(async (venue) => {
             try {
-              const url = movieId 
+              const url = movieId
                 ? `http://localhost:8080/api/shows/venue/${venue.id}?date=${isoDate}&movieId=${movieId}`
                 : `http://localhost:8080/api/shows/venue/${venue.id}?date=${isoDate}`;
-              
+
               const showRes = await fetch(url);
               if (!showRes.ok) {
                 return { ...venue, shows: [] };
@@ -109,14 +109,14 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
             }
           })
         );
-        
+
         setTheatres(withShows);
       } catch (err) {
         console.error('Error loading theatres/shows:', err);
         setTheatres([]);
       }
     };
-    
+
     if (allDatesLoaded) {
       loadTheatres();
     }
@@ -138,20 +138,60 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
     });
   };
 
-  // Get time of day icon
-  const getTimeIcon = (timeString) => {
+  // Get time of day styling based on session
+  const getTimeSession = (timeString) => {
     const hour = parseInt(timeString.split(':')[0]);
     const isPM = timeString.toLowerCase().includes('pm');
     const actualHour = isPM && hour !== 12 ? hour + 12 : (!isPM && hour === 12 ? 0 : hour);
-    
+
     if (actualHour >= 5 && actualHour < 12) {
-      return Sun; // Morning
+      return {
+        icon: Sun,
+        label: 'Morning',
+        emoji: '🌅',
+        bgColor: 'bg-gradient-to-r from-amber-400 to-yellow-500',
+        borderColor: 'border-amber-400',
+        textColor: 'text-amber-600',
+        hoverBorder: 'hover:border-amber-500',
+        selectedBg: 'bg-gradient-to-r from-amber-500 to-yellow-600',
+        shadow: 'shadow-amber-500/40'
+      };
     } else if (actualHour >= 12 && actualHour < 17) {
-      return Sun; // Afternoon
+      return {
+        icon: Sun,
+        label: 'Afternoon',
+        emoji: '☀️',
+        bgColor: 'bg-gradient-to-r from-orange-400 to-amber-500',
+        borderColor: 'border-orange-400',
+        textColor: 'text-orange-600',
+        hoverBorder: 'hover:border-orange-500',
+        selectedBg: 'bg-gradient-to-r from-orange-500 to-amber-600',
+        shadow: 'shadow-orange-500/40'
+      };
     } else if (actualHour >= 17 && actualHour < 20) {
-      return Sunset; // Evening
+      return {
+        icon: Sunset,
+        label: 'Evening',
+        emoji: '🌆',
+        bgColor: 'bg-gradient-to-r from-rose-400 to-orange-500',
+        borderColor: 'border-rose-400',
+        textColor: 'text-rose-600',
+        hoverBorder: 'hover:border-rose-500',
+        selectedBg: 'bg-gradient-to-r from-rose-500 to-orange-600',
+        shadow: 'shadow-rose-500/40'
+      };
     } else {
-      return Moon; // Night
+      return {
+        icon: Moon,
+        label: 'Night',
+        emoji: '🌙',
+        bgColor: 'bg-gradient-to-r from-indigo-500 to-purple-600',
+        borderColor: 'border-indigo-400',
+        textColor: 'text-indigo-600',
+        hoverBorder: 'hover:border-indigo-500',
+        selectedBg: 'bg-gradient-to-r from-indigo-600 to-purple-700',
+        shadow: 'shadow-indigo-500/40'
+      };
     }
   };
 
@@ -241,7 +281,7 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
             <div className="text-5xl mb-3">🎬</div>
             <h4 className="text-lg font-semibold text-slate-800 mb-1">No shows available</h4>
             <p className="text-slate-600 text-sm">
-              {movieId 
+              {movieId
                 ? "This movie has not been scheduled at any theatre yet. Please check back later or try a different date."
                 : "There are currently no theatres with shows available for this date."}
             </p>
@@ -271,26 +311,40 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
                   </div>
                 ) : (
                   theatre.shows.map((show) => {
-                  const isSelected =
-                    selectedShow?.theatreId === theatre.id &&
-                    selectedShow?.time === show.time &&
-                    selectedShow?.date?.id === selectedDate;
-                  
-                  const TimeIcon = getTimeIcon(show.time);
+                    const isSelected =
+                      selectedShow?.theatreId === theatre.id &&
+                      selectedShow?.time === show.time &&
+                      selectedShow?.date?.id === selectedDate;
 
-                  return (
-                    <button
-                      key={show.id}
-                      onClick={() => handleTimeClick(theatre, show)}
-                      className={`relative px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm ${isSelected
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)] ring-2 ring-blue-400 ring-offset-2'
-                          : 'bg-white border-slate-200 text-slate-700 hover:border-blue-500 hover:text-blue-600'
-                        }`}
-                    >
-                      <TimeIcon className={`absolute top-1 right-1 w-3 h-3 ${isSelected ? 'text-white/70' : 'text-slate-400'}`} />
-                      {show.time}
-                    </button>
-                  );
+                    const session = getTimeSession(show.time);
+                    const TimeIcon = session.icon;
+
+                    return (
+                      <button
+                        key={show.id}
+                        onClick={() => handleTimeClick(theatre, show)}
+                        className={`relative px-4 py-3 rounded-xl border-2 transition-all font-medium text-sm group ${isSelected
+                          ? `${session.selectedBg} border-transparent text-white shadow-lg ${session.shadow} ring-2 ring-white/50 ring-offset-2`
+                          : `bg-white ${session.borderColor} ${session.textColor} ${session.hoverBorder} hover:shadow-md`
+                          }`}
+                      >
+                        {/* Session Emoji */}
+                        <span className={`absolute -top-2 -right-2 text-base ${isSelected ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'} transition-opacity`}>
+                          {session.emoji}
+                        </span>
+
+                        {/* Time Icon */}
+                        <TimeIcon className={`absolute top-1 left-1 w-3.5 h-3.5 ${isSelected ? 'text-white/80' : session.textColor} opacity-60`} />
+
+                        {/* Time Text */}
+                        <span className="block mt-1 font-bold">{show.time}</span>
+
+                        {/* Session Label */}
+                        <span className={`block text-[10px] mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-500'} uppercase tracking-wider`}>
+                          {session.label}
+                        </span>
+                      </button>
+                    );
                   })
                 )}
               </div>
