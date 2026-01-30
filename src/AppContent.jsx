@@ -3,11 +3,13 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { AnimatePresence } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Search } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import Register from './components/Register';
 import Home from './components/Users/Home';
 import MovieDetails from './components/Users/MovieDetails';
+import EventDetails from './components/Users/EventDetails';
 import BookingLayout from './components/Movie/BookingLayout';
 import EventBookingLayout from './components/Events/EventBookingLayout';
 import OwnerDashboard from './components/Owner/OwnerDashboard';
@@ -73,9 +75,16 @@ const AppContent = () => {
     navigate('/booking/movie', { state: { movie } });
   };
 
-  const handleEventSelect = async (eventSummary) => {
+  // Navigate to event details page
+  const handleEventSelect = (eventSummary) => {
+    navigate(`/event/${eventSummary.id}`);
+  };
+
+  // Book event from EventDetails page
+  const handleEventBookNow = async (event) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/events/${eventSummary.id}`);
+      // Fetch full event details if not already complete
+      const res = await fetch(`http://localhost:8080/api/events/${event.id}`);
       if (!res.ok) {
         throw new Error('Failed to load event details');
       }
@@ -92,8 +101,8 @@ const AppContent = () => {
         id: full.id,
         title: full.title,
         poster: full.posterUrl,
-        venue: full.venue?.name || full.address || eventSummary.venue,
-        address: full.address || eventSummary.address,
+        venue: full.venue?.name || full.address || event.venue,
+        address: full.address || event.address,
         dates: parsedConfig.dates || [],
         zones: parsedConfig.zones || [],
       };
