@@ -17,7 +17,10 @@ const BookingDetails = ({ item, onBack }) => {
       }
 
       try {
-        const res = await fetch(`http://localhost:8080/api/events/${item.id}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:8080/api/events/${item.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!res.ok) {
           throw new Error('Failed to load event details');
         }
@@ -47,7 +50,10 @@ const BookingDetails = ({ item, onBack }) => {
   useEffect(() => {
     const loadBookings = async () => {
       try {
-        const res = await fetch('http://localhost:8080/api/bookings');
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:8080/api/bookings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!res.ok) {
           throw new Error('Failed to load bookings');
         }
@@ -110,15 +116,19 @@ const BookingDetails = ({ item, onBack }) => {
           const showDate = b.show?.showDate || (b.bookedAt ? b.bookedAt.substring(0, 10) : '');
           const showTime = b.show?.showTime || '';
 
+          // Venue Name
+          const venueName = b.show?.venue?.name || b.event?.venue?.name || (b.event?.address) || 'Unknown Venue';
+
           return {
             id: `BK${b.id}`,
-            userName: b.userName==null ? 'Guest' : b.userName,
+            userName: b.userName == null ? 'Guest' : b.userName,
             seats,
             ticketCount,
             date: showDate,
             time: showTime,
             status: b.status || 'CONFIRMED',
             totalAmount: Number(b.totalAmount) || 0,
+            venueName,
           };
         });
 
@@ -178,11 +188,10 @@ const BookingDetails = ({ item, onBack }) => {
           <div className="flex-1 w-full">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">{item.title}</h1>
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                item.type === 'movie' 
-                  ? 'bg-blue-100 text-blue-700' 
-                  : 'bg-purple-100 text-purple-700'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.type === 'movie'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-purple-100 text-purple-700'
+                }`}>
                 {item.type === 'movie' ? 'Movie' : 'Event'}
               </span>
             </div>
@@ -217,6 +226,48 @@ const BookingDetails = ({ item, onBack }) => {
             </div>
           </div>
         </div>
+
+        {/* Revenue by Theatre */}
+        {item.type === 'movie' && bookings.length > 0 && (() => {
+          // Group bookings by theatre
+          const theatreRevenue = bookings.reduce((acc, booking) => {
+            const theatre = booking.venueName || 'Unknown Venue';
+            if (!acc[theatre]) {
+              acc[theatre] = { revenue: 0, bookings: 0, seats: 0 };
+            }
+            acc[theatre].revenue += booking.totalAmount || 0;
+            acc[theatre].bookings += 1;
+            acc[theatre].seats += booking.ticketCount || booking.seats.length;
+            return acc;
+          }, {});
+
+          return (
+            <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 mt-6">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-4">Revenue by Theatre</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {Object.entries(theatreRevenue).map(([theatre, stats]) => (
+                  <div key={theatre} className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-100">
+                    <p className="font-semibold text-slate-800 mb-2 truncate" title={theatre}>{theatre}</p>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-600">Revenue:</span>
+                        <span className="text-sm font-bold text-indigo-700">₹{stats.revenue.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-600">Bookings:</span>
+                        <span className="text-sm font-semibold text-slate-700">{stats.bookings}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-600">Seats:</span>
+                        <span className="text-sm font-semibold text-slate-700">{stats.seats}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Search and Filter */}
@@ -258,49 +309,89 @@ const BookingDetails = ({ item, onBack }) => {
         </div>
       ) : (
         <div className="space-y-6">
-        {Object.entries(groupedBookings).map(([showTime, showBookings], index) => (
-          <motion.div
-            key={showTime}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-xl border border-slate-200 overflow-hidden"
-          >
-            <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200">
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="font-bold text-sm sm:text-base">{showTime.split(' ')[0]}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="font-bold text-sm sm:text-base">{showTime.split(' ').slice(1).join(' ')}</span>
-                </div>
-                <div className="ml-auto flex items-center gap-2 text-slate-600">
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="font-semibold text-sm sm:text-base">{showBookings.length} bookings</span>
+          {Object.entries(groupedBookings).map(([showTime, showBookings], index) => (
+            <motion.div
+              key={showTime}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="bg-white rounded-xl border border-slate-200 overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-slate-50 to-slate-100 px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="font-bold text-sm sm:text-base">{showTime.split(' ')[0]}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="font-bold text-sm sm:text-base">{showTime.split(' ').slice(1).join(' ')}</span>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2 text-slate-600">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="font-semibold text-sm sm:text-base">{showBookings.length} bookings</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="divide-y divide-slate-100">
-              {showBookings.map((booking, idx) => (
-                <div
-                  key={booking.id}
-                  className="px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
-                >
-                  {/* Desktop Layout */}
-                  <div className="hidden lg:flex items-center justify-between">
-                    <div className="flex items-center gap-6 flex-1">
-                      <div className="w-24">
-                        <p className="text-xs text-slate-500 mb-1">Booking ID</p>
-                        <p className="font-mono font-bold text-slate-800">{booking.id}</p>
+              <div className="divide-y divide-slate-100">
+                {showBookings.map((booking, idx) => (
+                  <div
+                    key={booking.id}
+                    className="px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors"
+                  >
+                    {/* Desktop Layout */}
+                    <div className="hidden lg:flex items-center justify-between">
+                      <div className="flex items-center gap-6 flex-1">
+                        <div className="w-24">
+                          <p className="text-xs text-slate-500 mb-1">Booking ID</p>
+                          <p className="font-mono font-bold text-slate-800">{booking.id}</p>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-slate-500 mb-1">Customer Name</p>
+                          <p className="font-semibold text-slate-800">{booking.userName}</p>
+                          <p className="text-xs text-slate-500 mt-1">{booking.venueName}</p>
+                        </div>
+                        <div className="w-48">
+                          <p className="text-xs text-slate-500 mb-1">Seats</p>
+                          <div className="flex flex-wrap gap-1">
+                            {booking.seats.map(seat => (
+                              <span
+                                key={seat}
+                                className="px-2 py-1 bg-violet-100 text-violet-700 text-xs font-bold rounded"
+                              >
+                                {seat}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="w-24 flex justify-end">
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full">
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="text-sm font-bold">Okay</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1">
+                    </div>
+
+                    {/* Mobile/Tablet Layout */}
+                    <div className="lg:hidden space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-xs text-slate-500 mb-1">Booking ID</p>
+                          <p className="font-mono font-bold text-slate-800 text-sm">{booking.id}</p>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full">
+                          <CheckCircle className="w-4 h-4" />
+                          <span className="text-sm font-bold">Okay</span>
+                        </div>
+                      </div>
+                      <div>
                         <p className="text-xs text-slate-500 mb-1">Customer Name</p>
                         <p className="font-semibold text-slate-800">{booking.userName}</p>
+                        <p className="text-xs text-slate-500 mt-1">{booking.venueName}</p>
                       </div>
-                      <div className="w-48">
+                      <div>
                         <p className="text-xs text-slate-500 mb-1">Seats</p>
                         <div className="flex flex-wrap gap-1">
                           {booking.seats.map(seat => (
@@ -313,49 +404,11 @@ const BookingDetails = ({ item, onBack }) => {
                           ))}
                         </div>
                       </div>
-                      <div className="w-24 flex justify-end">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full">
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="text-sm font-bold">Okay</span>
-                        </div>
-                      </div>
                     </div>
                   </div>
-
-                  {/* Mobile/Tablet Layout */}
-                  <div className="lg:hidden space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">Booking ID</p>
-                        <p className="font-mono font-bold text-slate-800 text-sm">{booking.id}</p>
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full">
-                        <CheckCircle className="w-4 h-4" />
-                        <span className="text-sm font-bold">Okay</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">Customer Name</p>
-                      <p className="font-semibold text-slate-800">{booking.userName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">Seats</p>
-                      <div className="flex flex-wrap gap-1">
-                        {booking.seats.map(seat => (
-                          <span
-                            key={seat}
-                            className="px-2 py-1 bg-violet-100 text-violet-700 text-xs font-bold rounded"
-                          >
-                            {seat}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+                ))}
+              </div>
+            </motion.div>
           ))}
         </div>
       )}

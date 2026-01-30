@@ -22,13 +22,16 @@ const MovieListings = ({ onSelectShow, owner }) => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('http://localhost:8080/api/shows/summary'); // summary list per tmdbMovieId
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:8080/api/shows/summary', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }); // summary list per tmdbMovieId
         if (!res.ok) {
           throw new Error('Failed to load scheduled movies');
         }
         const data = await res.json();
         // Each item: { tmdbMovieId, showCount, firstShowDate, lastShowDate, totalBookings, totalRevenue, theatres }
-        
+
         // Fetch movie details from TMDB for each movie
         const moviesWithDetails = await Promise.all(
           data.map(async (movie) => {
@@ -54,7 +57,7 @@ const MovieListings = ({ onSelectShow, owner }) => {
             }
           })
         );
-        
+
         setMovies(moviesWithDetails);
       } catch (err) {
         console.error('Error loading scheduled movies:', err);
@@ -75,7 +78,10 @@ const MovieListings = ({ onSelectShow, owner }) => {
         return;
       }
       try {
-        const res = await fetch(`http://localhost:8080/api/events/owner/${owner.id}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:8080/api/events/owner/${owner.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!res.ok) {
           throw new Error('Failed to load events');
         }
@@ -149,11 +155,10 @@ const MovieListings = ({ onSelectShow, owner }) => {
                 <button
                   key={type}
                   onClick={() => setFilterType(type)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    filterType === type
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${filterType === type
                       ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-md'
                       : 'bg-white text-slate-600 border border-slate-200 hover:border-violet-300'
-                  }`}
+                    }`}
                 >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </button>
@@ -187,85 +192,84 @@ const MovieListings = ({ onSelectShow, owner }) => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {filteredListings.map((item, index) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all group cursor-pointer"
-            onClick={() => onSelectShow(item)}
-          >
-            <div className="relative">
-              <img
-                src={item.poster}
-                alt={item.title}
-                className="w-full h-40 sm:h-48 object-cover"
-              />
-              <div className="absolute top-2 sm:top-3 right-2 sm:right-3">
-                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold ${
-                  item.type === 'movie' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-purple-500 text-white'
-                }`}>
-                  {item.type === 'movie' ? 'Movie' : 'Event'}
-                </span>
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all group cursor-pointer"
+              onClick={() => onSelectShow(item)}
+            >
+              <div className="relative">
+                <img
+                  src={item.poster}
+                  alt={item.title}
+                  className="w-full h-40 sm:h-48 object-cover"
+                />
+                <div className="absolute top-2 sm:top-3 right-2 sm:right-3">
+                  <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold ${item.type === 'movie'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-purple-500 text-white'
+                    }`}>
+                    {item.type === 'movie' ? 'Movie' : 'Event'}
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="p-4 sm:p-5">
-              <h3 className="text-base sm:text-lg font-bold text-slate-800 mb-2 line-clamp-1">
-                {item.title}
-              </h3>
-              
-              {item.type === 'movie' ? (
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
-                    <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="line-clamp-1">
-                      {item.theatres || 'No theatres'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
-                    <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span>
-                      {item.firstShowDate ? new Date(item.firstShowDate).toLocaleDateString() : 'N/A'} – {item.lastShowDate ? new Date(item.lastShowDate).toLocaleDateString() : 'N/A'}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
-                    <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="line-clamp-1">{item.venue}</span>
-                  </div>
-                </div>
-              )}
+              <div className="p-4 sm:p-5">
+                <h3 className="text-base sm:text-lg font-bold text-slate-800 mb-2 line-clamp-1">
+                  {item.title}
+                </h3>
 
-              <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-slate-500 mb-0.5 sm:mb-1">
-                    Total Bookings
-                  </p>
-                  <p className="text-lg sm:text-xl font-bold text-slate-800">
-                    {item.totalBookings || 0}
-                  </p>
+                {item.type === 'movie' ? (
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+                      <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="line-clamp-1">
+                        {item.theatres || 'No theatres'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+                      <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span>
+                        {item.firstShowDate ? new Date(item.firstShowDate).toLocaleDateString() : 'N/A'} – {item.lastShowDate ? new Date(item.lastShowDate).toLocaleDateString() : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+                      <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="line-clamp-1">{item.venue}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5 sm:mb-1">
+                      Total Bookings
+                    </p>
+                    <p className="text-lg sm:text-xl font-bold text-slate-800">
+                      {item.totalBookings || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5 sm:mb-1">
+                      Revenue
+                    </p>
+                    <p className="text-lg sm:text-xl font-bold text-emerald-600">
+                      ₹{(item.totalRevenue || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <button className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm font-semibold text-violet-600 group-hover:gap-1.5 sm:group-hover:gap-2 transition-all">
+                    <span className="hidden sm:inline">View Details</span>
+                    <span className="sm:hidden">Details</span>
+                    <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </button>
                 </div>
-                <div>
-                  <p className="text-xs text-slate-500 mb-0.5 sm:mb-1">
-                    Revenue
-                  </p>
-                  <p className="text-lg sm:text-xl font-bold text-emerald-600">
-                    ₹{(item.totalRevenue || 0).toLocaleString()}
-                  </p>
-                </div>
-                <button className="flex items-center gap-0.5 sm:gap-1 text-xs sm:text-sm font-semibold text-violet-600 group-hover:gap-1.5 sm:group-hover:gap-2 transition-all">
-                  <span className="hidden sm:inline">View Details</span>
-                  <span className="sm:hidden">Details</span>
-                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </button>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
           ))}
         </div>
       )}

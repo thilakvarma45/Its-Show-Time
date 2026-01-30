@@ -196,9 +196,13 @@ const AppContent = () => {
 
       let response;
       if (bookingType === 'MOVIE') {
+        const token = localStorage.getItem('token');
         response = await fetch('http://localhost:8080/api/bookings/movie', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             userId: user.id,
             showId: selectedShow?.showId || selectedShow?.id || null,
@@ -208,9 +212,13 @@ const AppContent = () => {
           }),
         });
       } else {
+        const token = localStorage.getItem('token');
         response = await fetch('http://localhost:8080/api/bookings/event', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             userId: user.id,
             eventId: selectedEvent?.id,
@@ -250,6 +258,7 @@ const AppContent = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     setView('HOME');
     setSelectedMovie(null);
     setSelectedEvent(null);
@@ -368,10 +377,10 @@ const AppContent = () => {
                 <div className="min-h-screen bg-cinema-light text-white">
                   <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
                     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                      <div className="flex items-center justify-between h-16 gap-4">
+                      <div className="flex items-center justify-between h-16">
                         <button
                           onClick={handleNavigateHome}
-                          className="flex items-center gap-2 sm:gap-3 group flex-shrink-0"
+                          className="flex items-center gap-2 sm:gap-3 group"
                         >
                           <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
                             <span className="text-2xl">🎬</span>
@@ -381,31 +390,6 @@ const AppContent = () => {
                             <p className="text-xs text-slate-500 font-medium">Your Entertainment Hub</p>
                           </div>
                         </button>
-
-                        {/* Search Bar in Header */}
-                        <div className="flex-1 max-w-xl">
-                          <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <Search className="w-5 h-5 text-slate-400" />
-                            </div>
-                            <input
-                              type="text"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              placeholder="Search movies, events..."
-                              className="w-full pl-10 pr-10 py-2.5 bg-slate-100 border border-slate-200 rounded-full text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all text-sm"
-                            />
-                            {searchQuery && (
-                              <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
-                              >
-                                <span className="text-lg font-light">×</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
                         <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
                       </div>
                     </div>
@@ -448,35 +432,6 @@ const AppContent = () => {
                     </div>
                   </header>
                   <MovieDetails onBookNow={handleBookNow} />
-                </div>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/event/:id"
-            element={
-              <ProtectedRoute user={user}>
-                <div className="min-h-screen bg-white">
-                  <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-                      <div className="flex items-center justify-between h-16">
-                        <button
-                          onClick={handleNavigateHome}
-                          className="flex items-center gap-2 sm:gap-3 group"
-                        >
-                          <div className="w-11 h-11 bg-slate-900 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                            <span className="text-2xl">🎬</span>
-                          </div>
-                          <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
-                          </div>
-                        </button>
-                        <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
-                      </div>
-                    </div>
-                  </header>
-                  <EventDetails onBookNow={handleEventBookNow} />
                 </div>
               </ProtectedRoute>
             }

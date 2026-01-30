@@ -50,13 +50,33 @@ const Register = ({ onAuthSuccess }) => {
         throw new Error('Registration failed');
       }
 
-      const user = await res.json();
+      // Auto-login to get the token
+      const loginRes = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      if (!loginRes.ok) {
+        // Fallback: just redirect to login if auto-login fails
+        window.location.href = '/login';
+        return;
+      }
+
+      const authData = await loginRes.json();
+
+      if (authData.token) {
+        localStorage.setItem('token', authData.token);
+      }
 
       // Show success message briefly
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        onAuthSuccess(user);
+        onAuthSuccess(authData);
       }, 1500);
     } catch (err) {
       console.error(err);
@@ -67,7 +87,7 @@ const Register = ({ onAuthSuccess }) => {
   };
 
   const isUser = role === 'user';
-  
+
   // Dynamic colors based on role
   const focusColor = isUser ? 'orange' : 'purple';
 
@@ -105,7 +125,7 @@ const Register = ({ onAuthSuccess }) => {
               >
                 <Film className="w-7 h-7 text-white" />
               </motion.div>
-              
+
               <motion.h1
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -114,7 +134,7 @@ const Register = ({ onAuthSuccess }) => {
               >
                 ITS SHOW TIME
               </motion.h1>
-              
+
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -142,11 +162,10 @@ const Register = ({ onAuthSuccess }) => {
                   onClick={() => setRole('user')}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`relative p-3 rounded-lg border-2 transition-all ${
-                    isUser
+                  className={`relative p-3 rounded-lg border-2 transition-all ${isUser
                       ? 'border-orange-400 bg-orange-50 shadow-md'
                       : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   {isUser && (
                     <motion.div
@@ -172,11 +191,10 @@ const Register = ({ onAuthSuccess }) => {
                   onClick={() => setRole('owner')}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`relative p-3 rounded-lg border-2 transition-all ${
-                    !isUser
+                  className={`relative p-3 rounded-lg border-2 transition-all ${!isUser
                       ? 'border-purple-400 bg-purple-50 shadow-md'
                       : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   {!isUser && (
                     <motion.div
@@ -234,11 +252,10 @@ const Register = ({ onAuthSuccess }) => {
                     onChange={handleChange}
                     placeholder="Enter your full name"
                     required
-                    className={`w-full pl-10 pr-3 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
-                      isUser 
-                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10' 
+                    className={`w-full pl-10 pr-3 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${isUser
+                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10'
                         : 'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10'
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -257,11 +274,10 @@ const Register = ({ onAuthSuccess }) => {
                     onChange={handleChange}
                     placeholder="Enter your email"
                     required
-                    className={`w-full pl-10 pr-3 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
-                      isUser 
-                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10' 
+                    className={`w-full pl-10 pr-3 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${isUser
+                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10'
                         : 'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10'
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -281,11 +297,10 @@ const Register = ({ onAuthSuccess }) => {
                     placeholder="Min 6 characters"
                     required
                     minLength={6}
-                    className={`w-full pl-10 pr-10 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
-                      isUser 
-                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10' 
+                    className={`w-full pl-10 pr-10 py-2.5 bg-white border-2 border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${isUser
+                        ? 'focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10'
                         : 'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10'
-                    }`}
+                      }`}
                   />
                   <button
                     type="button"

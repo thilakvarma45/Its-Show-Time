@@ -19,7 +19,10 @@ const TicketView = () => {
     const fetchBooking = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:8080/api/bookings/${id}`);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:8080/api/bookings/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!response.ok) {
           throw new Error('Booking not found');
         }
@@ -214,6 +217,13 @@ const TicketView = () => {
                 {/* Movie Details */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex gap-3">
+                    <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                    <div>
+                      <div className="text-slate-600 text-xs uppercase mb-1">Theatre</div>
+                      <div className="text-slate-900 font-semibold">{item?.venue?.name || 'Theatre'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
                     <Calendar className="w-5 h-5 text-blue-500 flex-shrink-0" />
                     <div>
                       <div className="text-slate-600 text-xs uppercase mb-1">Date</div>
@@ -262,13 +272,12 @@ const TicketView = () => {
 
             {/* Status Badge */}
             <div className="flex justify-center">
-              <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                booking?.status === 'CONFIRMED' 
-                  ? 'bg-green-100 text-green-700' 
-                  : booking?.status === 'CANCELLED'
+              <span className={`px-4 py-2 rounded-full text-sm font-semibold ${booking?.status === 'CONFIRMED'
+                ? 'bg-green-100 text-green-700'
+                : booking?.status === 'CANCELLED'
                   ? 'bg-red-100 text-red-700'
                   : 'bg-blue-100 text-blue-700'
-              }`}>
+                }`}>
                 {booking?.status || 'PENDING'}
               </span>
             </div>
@@ -276,8 +285,8 @@ const TicketView = () => {
             {/* QR Code */}
             <div className="flex flex-col items-center pt-4">
               <div className="bg-white p-3 rounded-lg border-2 border-slate-200 shadow-sm">
-                <QRCodeSVG 
-                  value={ticketUrl} 
+                <QRCodeSVG
+                  value={ticketUrl}
                   size={128}
                   level="H"
                   includeMargin={false}

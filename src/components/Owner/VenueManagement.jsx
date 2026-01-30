@@ -45,7 +45,12 @@ const VenueManagement = ({ owner }) => {
           setVenues([]);
           return;
         }
-        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (!res.ok) {
           throw new Error('Failed to load venues');
         }
@@ -91,9 +96,13 @@ const VenueManagement = ({ owner }) => {
     };
 
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:8080/api/venues', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -134,7 +143,12 @@ const VenueManagement = ({ owner }) => {
     try {
       const res = await fetch(
         `http://localhost:8080/api/venues/${confirmDeleteVenueId}${owner?.id ? `?ownerId=${owner.id}` : ''}`,
-        { method: 'DELETE' }
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
       );
 
       if (!res.ok) {
@@ -248,11 +262,10 @@ const VenueManagement = ({ owner }) => {
                 <button
                   key={type.value}
                   onClick={() => setFilterType(type.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    filterType === type.value
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${filterType === type.value
                       ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-md'
                       : 'bg-white text-slate-600 border border-slate-200 hover:border-violet-300'
-                  }`}
+                    }`}
                 >
                   {type.label}
                 </button>
@@ -408,11 +421,10 @@ const VenueManagement = ({ owner }) => {
                         key={amenity}
                         type="button"
                         onClick={() => toggleAmenity(amenity)}
-                        className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                          formData.amenities.includes(amenity)
+                        className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${formData.amenities.includes(amenity)
                             ? 'bg-violet-100 border-violet-300 text-violet-700'
                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
+                          }`}
                       >
                         {amenity}
                       </button>
