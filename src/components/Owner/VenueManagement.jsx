@@ -10,6 +10,7 @@ const VenueManagement = ({ owner }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmDeleteVenueId, setConfirmDeleteVenueId] = useState(null);
   const [deletingVenue, setDeletingVenue] = useState(false);
+  const [editingVenueId, setEditingVenueId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'theatre', 'event_ground'
   const [formData, setFormData] = useState({
@@ -45,7 +46,12 @@ const VenueManagement = ({ owner }) => {
           setVenues([]);
           return;
         }
-        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (!res.ok) {
           throw new Error('Failed to load venues');
         }
@@ -77,6 +83,12 @@ const VenueManagement = ({ owner }) => {
     e.preventDefault();
     if (!owner?.id) return;
 
+    const pincode = String(formData.pincode || '').trim();
+    if (!/^\d{6}$/.test(pincode)) {
+      toast.error('Pincode must be exactly 6 digits');
+      return;
+    }
+
     const payload = {
       ownerId: owner.id,
       name: formData.name,
@@ -84,29 +96,50 @@ const VenueManagement = ({ owner }) => {
       type: formData.type === 'event_ground' ? 'EVENT_GROUND' : 'THEATRE',
       location: formData.location,
       address: formData.address,
-      pincode: formData.pincode,
+      pincode,
       country: formData.country,
       capacity: parseInt(formData.capacity, 10),
       amenities: JSON.stringify(formData.amenities || []),
     };
 
     try {
-      const res = await fetch('http://localhost:8080/api/venues', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const token = localStorage.getItem('token');
+      const isEditing = Boolean(editingVenueId);
+      const url = isEditing
+        ? `http://localhost:8080/api/venues/${editingVenueId}`
+        : 'http://localhost:8080/api/venues';
+
+      const res = await fetch(url, {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        throw new Error('Failed to create venue');
+        const errText = await res.text().catch(() => '');
+        const errHeader = res.headers.get('X-Error');
+        throw new Error(errHeader || errText || 'Failed to create venue');
       }
       const saved = await res.json();
-      setVenues((prev) => [
-        ...prev,
-        {
-          ...saved,
-          amenities: formData.amenities,
-        },
-      ]);
+      if (isEditing) {
+        setVenues((prev) =>
+          prev.map((v) =>
+            v.id === editingVenueId ? { ...saved, amenities: formData.amenities } : v
+          )
+        );
+        toast.success('Venue updated');
+      } else {
+        setVenues((prev) => [
+          ...prev,
+          {
+            ...saved,
+            amenities: formData.amenities,
+          },
+        ]);
+        toast.success('Venue created');
+      }
       setFormData({
         name: '',
         location: '',
@@ -117,10 +150,11 @@ const VenueManagement = ({ owner }) => {
         amenities: [],
         type: 'theatre',
       });
+      setEditingVenueId(null);
       setShowAddModal(false);
     } catch (err) {
       console.error('Error creating venue:', err);
-      toast.error('Failed to create venue. Please try again.');
+      toast.error(err?.message || 'Failed to create venue. Please try again.');
     }
   };
 
@@ -134,7 +168,12 @@ const VenueManagement = ({ owner }) => {
     try {
       const res = await fetch(
         `http://localhost:8080/api/venues/${confirmDeleteVenueId}${owner?.id ? `?ownerId=${owner.id}` : ''}`,
-        { method: 'DELETE' }
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
       );
 
       if (!res.ok) {
@@ -155,6 +194,7 @@ const VenueManagement = ({ owner }) => {
   };
 
   const handleEdit = (venue) => {
+    setEditingVenueId(venue.id);
     setFormData({
       name: venue.name,
       location: venue.location,
@@ -212,6 +252,7 @@ const VenueManagement = ({ owner }) => {
               amenities: [],
               type: 'theatre'
             });
+            setEditingVenueId(null);
             setShowAddModal(true);
           }}
           className="w-full sm:w-auto px-4 sm:px-5 py-2.5 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-violet-500/30 flex items-center justify-center gap-2"
@@ -248,11 +289,10 @@ const VenueManagement = ({ owner }) => {
                 <button
                   key={type.value}
                   onClick={() => setFilterType(type.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    filterType === type.value
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${filterType === type.value
                       ? 'bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-md'
                       : 'bg-white text-slate-600 border border-slate-200 hover:border-violet-300'
-                  }`}
+                    }`}
                 >
                   {type.label}
                 </button>
@@ -303,7 +343,9 @@ const VenueManagement = ({ owner }) => {
               className="bg-white rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl mx-4"
             >
               <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 className="text-xl sm:text-2xl font-bold text-slate-800">Add New Venue</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-slate-800">
+                  {editingVenueId ? 'Edit Venue' : 'Add New Venue'}
+                </h3>
                 <button
                   onClick={() => setShowAddModal(false)}
                   className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -357,8 +399,14 @@ const VenueManagement = ({ owner }) => {
                       type="text"
                       name="pincode"
                       value={formData.pincode}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setFormData((prev) => ({ ...prev, pincode: digitsOnly }));
+                      }}
                       required
+                      inputMode="numeric"
+                      maxLength={6}
+                      pattern="\d{6}"
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                     />
                   </div>
@@ -408,11 +456,10 @@ const VenueManagement = ({ owner }) => {
                         key={amenity}
                         type="button"
                         onClick={() => toggleAmenity(amenity)}
-                        className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                          formData.amenities.includes(amenity)
+                        className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${formData.amenities.includes(amenity)
                             ? 'bg-violet-100 border-violet-300 text-violet-700'
                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
+                          }`}
                       >
                         {amenity}
                       </button>
@@ -425,7 +472,7 @@ const VenueManagement = ({ owner }) => {
                     type="submit"
                     className="flex-1 px-4 py-3 bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-violet-500/30"
                   >
-                    Save Venue
+                    {editingVenueId ? 'Update Venue' : 'Save Venue'}
                   </button>
                   <button
                     type="button"

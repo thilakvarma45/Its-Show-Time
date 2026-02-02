@@ -18,7 +18,10 @@ const MyBookings = ({ user, onBack }) => {
           setLoading(false);
           return;
         }
-        const res = await fetch(`http://localhost:8080/api/bookings/user/${user.id}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:8080/api/bookings/user/${user.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         if (!res.ok) {
           throw new Error('Failed to load bookings');
         }
@@ -60,7 +63,7 @@ const MyBookings = ({ user, onBack }) => {
                   title = `Movie #${b.show.tmdbMovieId}`;
                 }
               }
-              
+
               // Get show details
               time = b.show.showTime || '';
               date = formatDate(b.show.showDate) || date;
@@ -73,11 +76,11 @@ const MyBookings = ({ user, onBack }) => {
             title = b.event?.title || 'Event';
             poster = b.event?.posterUrl || poster;
             venue = b.event?.venue?.name || 'Event Venue';
-            
+
             // Parse event zones/passes
             if (details.selectedZones) {
               seats = Object.entries(details.selectedZones).flatMap(([zoneId, categories]) => {
-                return Object.entries(categories).map(([cat, qty]) => 
+                return Object.entries(categories).map(([cat, qty]) =>
                   `${cat}: ${qty}`
                 );
               });
@@ -86,6 +89,7 @@ const MyBookings = ({ user, onBack }) => {
 
           return {
             id: b.id,
+            bookingCode: b.bookingCode,
             type: b.type === 'EVENT' ? 'event' : 'movie',
             title,
             poster,
@@ -209,7 +213,7 @@ const MyBookings = ({ user, onBack }) => {
                       <p className="text-2xl font-bold text-slate-900">{formatCurrency(booking.price)}</p>
                     </div>
                     <a
-                      href={`/ticket/${booking.id}`}
+                      href={`/ticket/${booking.bookingCode || booking.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"

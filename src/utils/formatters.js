@@ -26,5 +26,10 @@ export const formatCurrency = (amount, currency = '₹') => {
 };
 
 export const formatBookingId = (id) => {
-  return id ? `BK${id}` : null;
+  if (!id) return null;
+  const raw = String(id);
+  // If backend already provided a BK-prefixed code, use it as-is.
+  if (raw.toUpperCase().startsWith('BK')) return raw.toUpperCase();
+  // Fallback for legacy numeric ids.
+  return `BK${raw}`;
 };

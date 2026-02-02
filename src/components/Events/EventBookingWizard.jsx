@@ -75,9 +75,9 @@ const EventBookingWizard = ({
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all ${
                     currentStep > step.id
-                      ? 'bg-green-600 text-white'
+                      ? 'bg-emerald-600 text-white'
                       : currentStep === step.id
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.5)]'
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.35)]'
                       : 'bg-slate-300 text-slate-600'
                   }`}
                 >
@@ -100,7 +100,7 @@ const EventBookingWizard = ({
               {index < STEPS.length - 1 && (
                 <div
                   className={`h-0.5 flex-1 mx-2 transition-colors ${
-                    currentStep > step.id ? 'bg-green-600' : 'bg-slate-300'
+                    currentStep > step.id ? 'bg-emerald-600' : 'bg-slate-300'
                   }`}
                 />
               )}

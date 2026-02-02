@@ -1,18 +1,17 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Calendar, X, Plus, Loader2, Search, Upload, Image as ImageIcon } from 'lucide-react';
-import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
+import { Film, Calendar, X, Plus, Loader2, Search, Upload, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { searchMovies } from '../../services/tmdb';
 import { toast } from 'react-toastify';
 
 const SmartScheduler = ({ owner }) => {
   const [activeTab, setActiveTab] = useState('MOVIE'); // 'MOVIE' | 'EVENT'
-  const [movies, setMovies] = useState([]);
-  const [loadingMovies, setLoadingMovies] = useState(true);
+  const [movieResults, setMovieResults] = useState([]);
+  const [loadingMovies, setLoadingMovies] = useState(false);
   const [movieSearchQuery, setMovieSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMoreMovies, setHasMoreMovies] = useState(true);
-  
+  const [movieDropdownOpen, setMovieDropdownOpen] = useState(false);
+
   // Movie scheduling state
   const [movieForm, setMovieForm] = useState({
     venueId: '',
@@ -30,30 +29,23 @@ const SmartScheduler = ({ owner }) => {
     vipPrice: ''
   });
 
-  // Fetch movies from TMDB - either search or popular
+  // Search movies from TMDB while typing (debounced)
   useEffect(() => {
     const loadMovies = async () => {
-      setLoadingMovies(true);
       try {
-        let result;
-        if (movieSearchQuery.trim()) {
-          // Search movies if there's a query
-          result = await searchMovies(movieSearchQuery, 1);
-          setMovies(result.movies);
-          setHasMoreMovies(result.totalPages > 1);
-          setCurrentPage(1);
-        } else {
-          // Load popular movies - load first 2 pages for more options
-          const page1 = await fetchPopularMovies(1);
-          const page2 = await fetchPopularMovies(2);
-          setMovies([...page1.movies, ...page2.movies]);
-          setHasMoreMovies(page1.totalPages > 2);
-          setCurrentPage(2);
+        const q = movieSearchQuery.trim();
+        if (!q) {
+          setMovieResults([]);
+          setLoadingMovies(false);
+          return;
         }
+
+        setLoadingMovies(true);
+        const result = await searchMovies(q, 1);
+        setMovieResults(result?.movies || []);
       } catch (err) {
         console.error('Error loading movies:', err);
-        setMovies([]);
-        setHasMoreMovies(false);
+        setMovieResults([]);
       } finally {
         setLoadingMovies(false);
       }
@@ -67,28 +59,6 @@ const SmartScheduler = ({ owner }) => {
     return () => clearTimeout(timeoutId);
   }, [movieSearchQuery]);
 
-  // Load more movies function
-  const loadMoreMovies = async () => {
-    if (loadingMovies || !hasMoreMovies) return;
-    
-    setLoadingMovies(true);
-    try {
-      let result;
-      if (movieSearchQuery.trim()) {
-        result = await searchMovies(movieSearchQuery, currentPage + 1);
-      } else {
-        result = await fetchPopularMovies(currentPage + 1);
-      }
-      setMovies(prev => [...prev, ...result.movies]);
-      setHasMoreMovies(result.totalPages > currentPage + 1);
-      setCurrentPage(prev => prev + 1);
-    } catch (err) {
-      console.error('Error loading more movies:', err);
-    } finally {
-      setLoadingMovies(false);
-    }
-  };
-
   // Event scheduling state
   const [eventForm, setEventForm] = useState({
     venueId: '',
@@ -100,7 +70,7 @@ const SmartScheduler = ({ owner }) => {
     dates: [],
     zones: []
   });
-  
+
   const [eventImageFile, setEventImageFile] = useState(null);
   const [eventImagePreview, setEventImagePreview] = useState(null);
   const [uploadingEventImage, setUploadingEventImage] = useState(false);
@@ -129,7 +99,12 @@ const SmartScheduler = ({ owner }) => {
           setVenues([]);
           return;
         }
-        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:8080/api/venues/owner/${owner.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (!res.ok) {
           throw new Error('Failed to load venues');
         }
@@ -250,9 +225,13 @@ const SmartScheduler = ({ owner }) => {
         vipPrice: Number(movieForm.vipPrice || 0),
       };
 
+      const token = localStorage.getItem('token');
       const res = await fetch('http://localhost:8080/api/schedules', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
 
@@ -310,8 +289,12 @@ const SmartScheduler = ({ owner }) => {
       const formData = new FormData();
       formData.append('image', eventImageFile);
 
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:8080/api/upload/event', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -358,10 +341,10 @@ const SmartScheduler = ({ owner }) => {
   const addZone = () => {
     setEventForm(prev => ({
       ...prev,
-      zones: [...prev.zones, { 
-        id: `zone_${Date.now()}`, 
-        name: '', 
-        capacity: '', 
+      zones: [...prev.zones, {
+        id: `zone_${Date.now()}`,
+        name: '',
+        capacity: '',
         adultPrice: '',
         childrenPrice: ''
       }]
@@ -386,7 +369,7 @@ const SmartScheduler = ({ owner }) => {
 
   const handleEventSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!owner?.id) {
       toast.error('Owner information is missing. Please refresh and try again.');
       return;
@@ -429,11 +412,11 @@ const SmartScheduler = ({ owner }) => {
         'border-green-500',
         'border-red-500'
       ];
-      
+
       const eventConfig = {
         dates: eventForm.dates.map((d, idx) => ({
           id: d.id || `date_${idx + 1}`,
-          label: d.date && d.time 
+          label: d.date && d.time
             ? `${new Date(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} | ${d.time}`
             : d.date || `Date ${idx + 1}`,
           date: d.date,
@@ -451,9 +434,13 @@ const SmartScheduler = ({ owner }) => {
         }))
       };
 
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:8080/api/events', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           ownerId: owner.id,
           venueId: Number(eventForm.venueId),
@@ -474,7 +461,7 @@ const SmartScheduler = ({ owner }) => {
 
       const data = await response.json();
       toast.success(`Event "${eventForm.eventName}" created successfully!`);
-      
+
       // Reset form and image states
       setEventImageFile(null);
       setEventImagePreview(null);
@@ -505,22 +492,20 @@ const SmartScheduler = ({ owner }) => {
       <div className="flex gap-1 sm:gap-2 border-b border-slate-200 overflow-x-auto">
         <button
           onClick={() => setActiveTab('MOVIE')}
-          className={`px-4 sm:px-6 py-2.5 sm:py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-sm sm:text-base ${
-            activeTab === 'MOVIE'
+          className={`px-4 sm:px-6 py-2.5 sm:py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-sm sm:text-base ${activeTab === 'MOVIE'
               ? 'border-violet-500 text-violet-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
+            }`}
         >
           <Film className="w-4 h-4 sm:w-5 sm:h-5 inline-block mr-1.5 sm:mr-2" />
           <span className="hidden sm:inline">Schedule </span>Movie
         </button>
         <button
           onClick={() => setActiveTab('EVENT')}
-          className={`px-4 sm:px-6 py-2.5 sm:py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-sm sm:text-base ${
-            activeTab === 'EVENT'
+          className={`px-4 sm:px-6 py-2.5 sm:py-3 font-semibold transition-all border-b-2 whitespace-nowrap text-sm sm:text-base ${activeTab === 'EVENT'
               ? 'border-violet-500 text-violet-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
+            }`}
         >
           <Calendar className="w-4 h-4 sm:w-5 sm:h-5 inline-block mr-1.5 sm:mr-2" />
           <span className="hidden sm:inline">Create </span>Event
@@ -557,15 +542,26 @@ const SmartScheduler = ({ owner }) => {
             {/* Step 2: Search and Select Movie */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Search and Select Movie</label>
-              
-              {/* Movie Search Input */}
-              <div className="relative mb-3">
+
+              {/* Movie Search + Dropdown */}
+              <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search movies by title..."
                   value={movieSearchQuery}
-                  onChange={(e) => setMovieSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setMovieSearchQuery(next);
+                    // Require re-select if user edits the text
+                    setMovieForm((prev) => ({ ...prev, movieId: '' }));
+                    setMovieDropdownOpen(true);
+                  }}
+                  onFocus={() => setMovieDropdownOpen(true)}
+                  onBlur={() => {
+                    // Allow click on dropdown items before closing
+                    setTimeout(() => setMovieDropdownOpen(false), 150);
+                  }}
                   className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent shadow-sm"
                 />
                 {movieSearchQuery && (
@@ -573,71 +569,60 @@ const SmartScheduler = ({ owner }) => {
                     type="button"
                     onClick={() => {
                       setMovieSearchQuery('');
-                      setMovieForm(prev => ({ ...prev, movieId: '' }));
+                      setMovieForm((prev) => ({ ...prev, movieId: '' }));
+                      setMovieResults([]);
+                      setMovieDropdownOpen(false);
                     }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 )}
-              </div>
 
-              {/* Movie Selection Dropdown */}
-              {loadingMovies ? (
-                <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 animate-spin text-violet-500" />
-                  <span className="text-slate-600">
-                    {movieSearchQuery ? 'Searching movies...' : 'Loading movies from TMDB...'}
-                  </span>
-                </div>
-              ) : (
-                <select
-                  name="movieId"
-                  value={movieForm.movieId}
-                  onChange={handleMovieInputChange}
-                  required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                >
-                  <option value="">
-                    {movieSearchQuery 
-                      ? movies.length === 0 
-                        ? 'No movies found. Try a different search.' 
-                        : `Select from ${movies.length} result${movies.length !== 1 ? 's' : ''}...`
-                      : 'Select a movie from popular movies...'}
-                  </option>
-                  {movies.map(movie => (
-                    <option key={movie.id} value={movie.id}>
-                      {movie.title} ({movie.duration}) - ⭐ {movie.rating} {movie.genre.length > 0 ? `- ${movie.genre[0]}` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-              
-              {/* Helper text and Load More */}
-              <div className="mt-2 flex items-center justify-between">
-                <p className="text-xs text-slate-500">
-                  {movieSearchQuery 
-                    ? `Found ${movies.length} movie${movies.length !== 1 ? 's' : ''} matching "${movieSearchQuery}"`
-                    : `Showing ${movies.length} popular movies. Type above to search for specific movies.`}
-                </p>
-                {hasMoreMovies && !movieSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={loadMoreMovies}
-                    disabled={loadingMovies}
-                    className="text-xs font-semibold text-violet-600 hover:text-violet-700 disabled:text-slate-400 disabled:cursor-not-allowed flex items-center gap-1"
-                  >
+                {/* Dropdown */}
+                {movieDropdownOpen && movieSearchQuery.trim() && (
+                  <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
                     {loadingMovies ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Loading...
-                      </>
+                      <div className="px-4 py-3 flex items-center gap-2 text-slate-600">
+                        <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+                        <span className="text-sm">Searching…</span>
+                      </div>
+                    ) : movieResults.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-slate-600">
+                        No movies found. Try a different name.
+                      </div>
                     ) : (
-                      'Load More Movies'
+                      <div className="max-h-72 overflow-y-auto">
+                        {movieResults.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setMovieForm((prev) => ({ ...prev, movieId: String(m.id) }));
+                              setMovieSearchQuery(m.title);
+                              setMovieDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-800 truncate">{m.title}</div>
+                              <div className="text-xs text-slate-500 truncate">
+                                {m.duration ? m.duration : '—'} {m.rating ? `• ⭐ ${m.rating}` : ''}
+                              </div>
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
                     )}
-                  </button>
+                  </div>
                 )}
               </div>
+
+              {/* Selected movie helper */}
+              <p className="mt-2 text-xs text-slate-500">
+                {movieForm.movieId ? `Selected TMDB Movie ID: ${movieForm.movieId}` : 'Type and select a movie from the dropdown.'}
+              </p>
             </div>
 
             {/* Step 3: Run Duration (7 / 14 / Custom) */}
@@ -651,33 +636,30 @@ const SmartScheduler = ({ owner }) => {
                 <button
                   type="button"
                   onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: '7' } })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                    movieForm.schedulePreset === '7'
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${movieForm.schedulePreset === '7'
                       ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
-                  }`}
+                    }`}
                 >
                   Next 7 days
                 </button>
                 <button
                   type="button"
                   onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: '14' } })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                    movieForm.schedulePreset === '14'
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${movieForm.schedulePreset === '14'
                       ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
-                  }`}
+                    }`}
                 >
                   Next 14 days
                 </button>
                 <button
                   type="button"
                   onClick={() => handleMovieInputChange({ target: { name: 'schedulePreset', value: 'custom' } })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                    movieForm.schedulePreset === 'custom'
+                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${movieForm.schedulePreset === 'custom'
                       ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-500/40'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600'
-                  }`}
+                    }`}
                 >
                   Custom calendar
                 </button>
@@ -710,9 +692,8 @@ const SmartScheduler = ({ owner }) => {
                     onChange={handleMovieInputChange}
                     required
                     disabled={movieForm.schedulePreset !== 'custom'}
-                    className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${
-                      movieForm.schedulePreset !== 'custom' ? 'opacity-70 cursor-not-allowed' : ''
-                    }`}
+                    className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent ${movieForm.schedulePreset !== 'custom' ? 'opacity-70 cursor-not-allowed' : ''
+                      }`}
                   />
                   {movieForm.schedulePreset !== 'custom' && movieForm.startDate && movieForm.endDate && (
                     <p className="mt-1 text-[11px] text-slate-500">
@@ -728,7 +709,7 @@ const SmartScheduler = ({ owner }) => {
             {/* Step 4: Smart Timing Picker */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-3">Select Show Times</label>
-              
+
               {/* Suggested Slots */}
               <div className="mb-4">
                 <p className="text-xs text-slate-600 mb-2 font-medium">Suggested Slots:</p>
@@ -739,11 +720,10 @@ const SmartScheduler = ({ owner }) => {
                       type="button"
                       onClick={() => addSuggestedSlot(slot)}
                       disabled={movieForm.confirmedShows.includes(slot)}
-                      className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${
-                        movieForm.confirmedShows.includes(slot)
+                      className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${movieForm.confirmedShows.includes(slot)
                           ? 'bg-violet-100 border-violet-300 text-violet-700 cursor-not-allowed'
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-violet-300 hover:text-violet-600'
-                      }`}
+                        }`}
                     >
                       {slot}
                     </button>
@@ -922,9 +902,9 @@ const SmartScheduler = ({ owner }) => {
                   </label>
                   {eventImagePreview && (
                     <div className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-violet-200">
-                      <img 
-                        src={eventImagePreview} 
-                        alt="Preview" 
+                      <img
+                        src={eventImagePreview}
+                        alt="Preview"
                         className="w-full h-full object-cover"
                       />
                       <button

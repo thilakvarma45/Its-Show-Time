@@ -31,7 +31,7 @@ const EventSidebar = ({ event, onBack }) => {
       {/* Event Details */}
       <div className="flex-1">
         <div className="mb-4">
-          <span className="inline-block px-3 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full uppercase tracking-wide mb-3">
+          <span className="inline-block px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold rounded-full uppercase tracking-wide mb-3">
             Live Event
           </span>
         </div>
@@ -42,7 +42,7 @@ const EventSidebar = ({ event, onBack }) => {
 
         {/* Venue Info */}
         <div className="flex items-start gap-3 mb-4">
-          <MapPin className="w-5 h-5 text-purple-600 flex-shrink-0 mt-1" />
+          <MapPin className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-1" />
           <div>
             <div className="text-slate-600 text-sm font-semibold mb-1">{event.venue}</div>
             <div className="text-slate-500 text-xs">{event.address}</div>
@@ -51,7 +51,7 @@ const EventSidebar = ({ event, onBack }) => {
 
         {/* Dates Available */}
         <div className="flex items-start gap-3">
-          <Calendar className="w-5 h-5 text-purple-600 flex-shrink-0 mt-1" />
+          <Calendar className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-1" />
           <div>
             <div className="text-slate-600 text-sm font-semibold mb-2">Available Dates</div>
             <div className="space-y-1">

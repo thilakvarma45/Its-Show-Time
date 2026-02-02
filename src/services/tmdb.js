@@ -76,6 +76,9 @@ const transformMovie = (tmdbMovie) => {
     poster: tmdbMovie.poster_path
       ? `${TMDB_IMAGE_BASE_URL}${tmdbMovie.poster_path}`
       : 'https://via.placeholder.com/500x750?text=No+Poster',
+    posterOriginal: tmdbMovie.poster_path ? `${TMDB_IMAGE_BASE_URL_ORIGINAL}${tmdbMovie.poster_path}` : null,
+    // High-res backdrop for banners/hero sections
+    backdrop: tmdbMovie.backdrop_path ? `${TMDB_IMAGE_BASE_URL_BACKDROP}${tmdbMovie.backdrop_path}` : null,
     // Additional TMDB data that might be useful
     overview: tmdbMovie.overview,
     releaseDate: tmdbMovie.release_date,
@@ -283,8 +286,8 @@ export const getMovieRecommendations = async (movieId) => {
 
     const data = await response.json();
 
-    // Transform and return first 8 recommendations
-    return data.results.slice(0, 8).map(transformMovie);
+    // Transform and return first 15 recommendations
+    return data.results.slice(0, 15).map(transformMovie);
   } catch (error) {
     console.error('Error fetching movie recommendations:', error);
     throw error;
@@ -353,6 +356,107 @@ export const fetchNowPlayingMovies = async () => {
     return data.results.slice(0, 10).map(transformMovie);
   } catch (error) {
     console.error('Error fetching now playing movies:', error);
+    throw error;
+  }
+};
+
+/**
+ * Discover movies via TMDB (used for curated rows).
+ */
+const discoverMovies = async (params = {}) => {
+  const query = new URLSearchParams({ api_key: TMDB_API_KEY, ...params });
+  const response = await fetch(`${TMDB_BASE_URL}/discover/movie?${query.toString()}`, {
+    headers: {
+      'Authorization': `Bearer ${TMDB_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`TMDB API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return (data.results || []).map(transformMovie);
+};
+
+/**
+ * Telugu recent releases (India region).
+ */
+export const fetchTeluguRecentMovies = async () => {
+  try {
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(today.getDate() - 365);
+
+    return await discoverMovies({
+      region: 'IN',
+      with_original_language: 'te',
+      sort_by: 'primary_release_date.desc',
+      'primary_release_date.gte': from.toISOString().slice(0, 10),
+      'primary_release_date.lte': today.toISOString().slice(0, 10),
+      include_adult: 'false',
+      page: '1',
+    });
+  } catch (error) {
+    console.error('Error fetching Telugu recent movies:', error);
+    throw error;
+  }
+};
+
+/**
+ * Indian recent releases (India region).
+ */
+export const fetchIndianRecentMovies = async () => {
+  try {
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(today.getDate() - 180);
+
+    return await discoverMovies({
+      region: 'IN',
+      sort_by: 'primary_release_date.desc',
+      'primary_release_date.gte': from.toISOString().slice(0, 10),
+      'primary_release_date.lte': today.toISOString().slice(0, 10),
+      include_adult: 'false',
+      page: '1',
+    });
+  } catch (error) {
+    console.error('Error fetching Indian recent movies:', error);
+    throw error;
+  }
+};
+
+/**
+ * Recent releases for a specific language (TMDB original language).
+ * Example codes: te, hi, ta, ml, kn, en, ko, ja
+ */
+export const fetchRecentMoviesByLanguage = async (languageCode) => {
+  try {
+    if (!languageCode || languageCode === 'all') return [];
+
+    const indianLangs = new Set(['te', 'hi', 'ta', 'ml', 'kn', 'bn', 'mr', 'gu', 'pa', 'or']);
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(today.getDate() - 365);
+
+    const params = {
+      with_original_language: languageCode,
+      sort_by: 'primary_release_date.desc',
+      'primary_release_date.gte': from.toISOString().slice(0, 10),
+      'primary_release_date.lte': today.toISOString().slice(0, 10),
+      include_adult: 'false',
+      page: '1',
+    };
+
+    // If it's an Indian language, bias to IN region.
+    if (indianLangs.has(languageCode)) {
+      params.region = 'IN';
+    }
+
+    return await discoverMovies(params);
+  } catch (error) {
+    console.error('Error fetching recent movies by language:', error);
     throw error;
   }
 };

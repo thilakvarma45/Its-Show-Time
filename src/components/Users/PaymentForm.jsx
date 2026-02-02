@@ -98,7 +98,13 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
       // After completion, proceed to ticket
       setTimeout(() => {
         setShowModal(false);
-        onPaymentComplete({ ...formData, paymentMethod });
+        onPaymentComplete({
+          ...formData,
+          paymentMethod,
+          finalAmount: finalPrice,
+          discountAmount,
+          couponCode: appliedCoupon?.code || null,
+        });
       }, 2000);
     }, processingTime);
   };
@@ -265,7 +271,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                     className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${couponCode.trim()
                       ? bookingDetails.bookingType === 'MOVIE'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                       }`}
                   >
@@ -285,12 +291,12 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                 </div>
               </>
             ) : (
-              <div className={`flex items-center justify-between p-3 rounded-lg ${bookingDetails.bookingType === 'MOVIE' ? 'bg-blue-50 border border-blue-200' : 'bg-purple-50 border border-purple-200'
+              <div className={`flex items-center justify-between p-3 rounded-lg ${bookingDetails.bookingType === 'MOVIE' ? 'bg-blue-50 border border-blue-200' : 'bg-emerald-50 border border-emerald-200'
                 }`}>
                 <div className="flex items-center gap-2">
-                  <CheckCircle className={`w-5 h-5 ${bookingDetails.bookingType === 'MOVIE' ? 'text-blue-600' : 'text-purple-600'}`} />
+                  <CheckCircle className={`w-5 h-5 ${bookingDetails.bookingType === 'MOVIE' ? 'text-blue-600' : 'text-emerald-600'}`} />
                   <div>
-                    <span className={`font-bold text-sm ${bookingDetails.bookingType === 'MOVIE' ? 'text-blue-700' : 'text-purple-700'}`}>
+                    <span className={`font-bold text-sm ${bookingDetails.bookingType === 'MOVIE' ? 'text-blue-700' : 'text-emerald-700'}`}>
                       {appliedCoupon.code}
                     </span>
                     <span className="text-slate-600 text-xs ml-2">{appliedCoupon.description}</span>
@@ -324,7 +330,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                   ₹{originalPrice}
                 </span>
               )}
-              <span className={bookingDetails.bookingType === 'MOVIE' ? 'text-blue-600' : 'text-purple-600'}>
+              <span className={bookingDetails.bookingType === 'MOVIE' ? 'text-blue-600' : 'text-emerald-600'}>
                 ₹{finalPrice.toFixed(2)}
               </span>
             </div>
@@ -354,14 +360,14 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                 className={`p-4 rounded-lg border-2 transition-all ${isActive
                   ? bookingDetails.bookingType === 'MOVIE'
                     ? 'border-blue-600 bg-blue-50'
-                    : 'border-purple-600 bg-purple-50'
+                    : 'border-emerald-600 bg-emerald-50'
                   : 'border-slate-200 hover:border-slate-300'
                   }`}
               >
                 <Icon className={`w-6 h-6 mx-auto mb-2 ${isActive
                   ? bookingDetails.bookingType === 'MOVIE'
                     ? 'text-blue-600'
-                    : 'text-purple-600'
+                    : 'text-emerald-600'
                   : 'text-slate-400'
                   }`} />
                 <div className={`text-xs font-semibold ${isActive ? 'text-slate-900' : 'text-slate-600'
@@ -389,7 +395,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                   maxLength="19"
                   required
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
-                           focus:outline-none focus:border-purple-600 transition-colors"
+                           focus:outline-none focus:border-slate-400 transition-colors"
                 />
               </div>
 
@@ -403,7 +409,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                   placeholder="Name "
                   required
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
-                           focus:outline-none focus:border-purple-600 transition-colors uppercase"
+                           focus:outline-none focus:border-slate-400 transition-colors uppercase"
                 />
               </div>
 
@@ -419,7 +425,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                     maxLength="5"
                     required
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
-                             focus:outline-none focus:border-purple-600 transition-colors"
+                             focus:outline-none focus:border-slate-400 transition-colors"
                   />
                 </div>
                 <div>
@@ -433,7 +439,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                     maxLength="3"
                     required
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
-                             focus:outline-none focus:border-purple-600 transition-colors"
+                             focus:outline-none focus:border-slate-400 transition-colors"
                   />
                 </div>
               </div>
@@ -452,8 +458,13 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                       <button
                         key={app.name}
                         type="button"
-                        className={`bg-white p-6 rounded-2xl hover:scale-105 transition-all flex flex-col items-center justify-center aspect-square shadow-lg border-2 ${isSelected ? 'border-purple-500 ring-2 ring-purple-200 scale-105' : 'border-slate-200 hover:border-slate-300'
-                          }`}
+                        className={`bg-white p-6 rounded-2xl hover:scale-105 transition-all flex flex-col items-center justify-center aspect-square shadow-lg border-2 ${
+                          isSelected
+                            ? (bookingDetails.bookingType === 'MOVIE'
+                              ? 'border-blue-500 ring-2 ring-blue-200 scale-105'
+                              : 'border-emerald-500 ring-2 ring-emerald-200 scale-105')
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
                         onClick={() => {
                           setFormData(prev => ({ ...prev, selectedUpiApp: app.name, upiId: '' }));
                         }}
@@ -466,7 +477,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                             animate={{ scale: 1 }}
                             className="mt-1"
                           >
-                            <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className={`w-5 h-5 ${bookingDetails.bookingType === 'MOVIE' ? 'text-blue-600' : 'text-emerald-600'}`} fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           </motion.div>
@@ -498,7 +509,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                       placeholder="yourname@upi"
                       required={paymentMethod === 'upi' && !formData.selectedUpiApp}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
-                               focus:outline-none focus:border-purple-600 transition-colors"
+                               focus:outline-none focus:border-slate-400 transition-colors"
                     />
                     <p className="text-xs text-slate-500 mt-1">e.g., yourname@paytm, yourname@ybl, yourname@phonepe</p>
                   </div>
@@ -517,7 +528,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                 onChange={handleChange}
                 required={paymentMethod === 'netbanking'}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 
-                         focus:outline-none focus:border-purple-600 transition-colors"
+                         focus:outline-none focus:border-slate-400 transition-colors"
               >
                 <option value="">Choose your bank</option>
                 {banks.map((bank) => (
@@ -543,7 +554,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                     className={`p-4 rounded-lg border-2 transition-all ${formData.selectedWallet === wallet.name
                       ? bookingDetails.bookingType === 'MOVIE'
                         ? 'border-blue-600 bg-blue-50'
-                        : 'border-purple-600 bg-purple-50'
+                        : 'border-emerald-600 bg-emerald-50'
                       : 'border-slate-200 hover:border-slate-300'
                       }`}
                   >
@@ -551,7 +562,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
                       <div className={`text-lg font-bold mb-1 ${formData.selectedWallet === wallet.name
                         ? bookingDetails.bookingType === 'MOVIE'
                           ? 'text-blue-600'
-                          : 'text-purple-600'
+                          : 'text-emerald-600'
                         : 'text-slate-900'
                         }`}>{wallet.logo}</div>
                       <div className="text-xs text-slate-600">{wallet.name}</div>
@@ -576,7 +587,7 @@ const PaymentForm = ({ bookingDetails, onPaymentComplete }) => {
             type="submit"
             className={`w-full mt-6 px-6 py-4 text-white rounded-lg font-semibold uppercase tracking-wider transition-all shadow-lg ${bookingDetails.bookingType === 'MOVIE'
               ? 'bg-blue-600 hover:bg-blue-700'
-              : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
+              : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700'
               }`}
           >
             Pay ₹{finalPrice.toFixed(2)}

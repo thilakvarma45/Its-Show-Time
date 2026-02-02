@@ -328,11 +328,6 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
                           : `bg-white ${session.borderColor} ${session.textColor} ${session.hoverBorder} hover:shadow-md`
                           }`}
                       >
-                        {/* Session Emoji */}
-                        <span className={`absolute -top-2 -right-2 text-base ${isSelected ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'} transition-opacity`}>
-                          {session.emoji}
-                        </span>
-
                         {/* Time Icon */}
                         <TimeIcon className={`absolute top-1 left-1 w-3.5 h-3.5 ${isSelected ? 'text-white/80' : session.textColor} opacity-60`} />
 

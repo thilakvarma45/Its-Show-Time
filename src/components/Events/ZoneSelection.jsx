@@ -18,7 +18,14 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
 
       try {
         const url = `http://localhost:8080/api/bookings/event/${event.id}/zone-availability?eventDateId=${selectedDate.id}`;
+<<<<<<< HEAD
         const response = await fetch(url);
+=======
+        const token = localStorage.getItem('token');
+        const response = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+>>>>>>> 64451371a53ebc71e3785776ada2677f191cde00
 
         if (response.ok) {
           const availability = await response.json();
@@ -112,7 +119,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
           <p className="mt-4 text-slate-600 font-medium">Loading zone availability...</p>
         </div>
       </div>
@@ -127,7 +134,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
         animate={{ opacity: 1, y: 0 }}
         className="relative"
       >
-        <div className="mx-auto w-4/5 h-2 bg-gradient-to-r from-transparent via-purple-500 to-transparent rounded-full mb-2" />
+        <div className="mx-auto w-4/5 h-2 bg-gradient-to-r from-transparent via-emerald-500 to-transparent rounded-full mb-2" />
         <div className="text-center text-slate-600 text-sm uppercase tracking-widest">
           Stage
         </div>
@@ -153,8 +160,14 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
+<<<<<<< HEAD
               className={`backdrop-blur-xl bg-white/5 rounded-2xl border-2 p-6 shadow-lg ${isZoneFull ? 'opacity-60 border-red-400 bg-red-50/20' : zone.color
                 }`}
+=======
+              className={`rounded-2xl border p-6 shadow-sm ${
+                isZoneFull ? 'opacity-70 border-red-300 bg-red-50' : 'border-slate-200 bg-white'
+              }`}
+>>>>>>> 64451371a53ebc71e3785776ada2677f191cde00
             >
               {/* Zone Header */}
               <div className="mb-4">
@@ -183,7 +196,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                         {availability.available} available
                       </p>
                       {currentZoneInCart > 0 && (
-                        <p className="text-xs text-blue-600 font-medium">
+                        <p className="text-xs text-emerald-700 font-medium">
                           ({currentZoneInCart} in cart)
                         </p>
                       )}
@@ -203,12 +216,16 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                   return (
                     <div
                       key={category.type}
+<<<<<<< HEAD
                       className={`flex items-center justify-between p-3 rounded-lg backdrop-blur-sm ${isZoneFull ? 'bg-red-50/50 opacity-60' : 'bg-white/10'
+=======
+                      className={`flex items-center justify-between p-3 rounded-lg ${isZoneFull ? 'bg-red-50/50 opacity-60' : 'bg-slate-50'
+>>>>>>> 64451371a53ebc71e3785776ada2677f191cde00
                         }`}
                     >
                       <div className="flex-1">
                         <div className="text-slate-900 font-semibold">{category.type}</div>
-                        <div className="text-purple-600 font-bold">₹{category.price}</div>
+                        <div className="text-emerald-700 font-bold">₹{category.price}</div>
                       </div>
 
                       {/* Quantity Stepper */}
@@ -227,7 +244,11 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                           onClick={() => updateQuantity(zone.name, category.type, 1)}
                           disabled={!canAddMore}
                           className={`w-8 h-8 rounded-lg text-white transition-all flex items-center justify-center shadow-md ${canAddMore
+<<<<<<< HEAD
                               ? 'bg-purple-600 hover:bg-purple-700 cursor-pointer'
+=======
+                              ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
+>>>>>>> 64451371a53ebc71e3785776ada2677f191cde00
                               : 'bg-slate-400 cursor-not-allowed'
                             }`}
                           title={!canAddMore ? (isZoneFull ? 'Zone is sold out' : 'Zone capacity reached with your current selection') : 'Add pass'}
@@ -274,7 +295,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky bottom-0 bg-white border-t-2 border-purple-600 p-6 rounded-t-lg shadow-lg"
+          className="sticky bottom-0 bg-white border-t-2 border-emerald-600 p-6 rounded-t-lg shadow-lg"
         >
           <div className="flex items-center justify-between max-w-4xl mx-auto">
             <div>
@@ -285,7 +306,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
             </div>
             <button
               onClick={() => onContinue(cart, calculateTotal.totalPrice)}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold uppercase tracking-wider transition-all shadow-lg"
+              className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg font-semibold uppercase tracking-wider transition-all shadow-lg"
             >
               Proceed to Payment
             </button>
