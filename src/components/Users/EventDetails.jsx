@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import StarRating from '../common/StarRating';
 import {
     ArrowLeft,
     MapPin,
@@ -12,6 +14,8 @@ import {
     Users
 } from 'lucide-react';
 
+import ReviewsList from '../common/ReviewsList';
+
 const EventDetails = ({ onBookNow }) => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -21,10 +25,117 @@ const EventDetails = ({ onBookNow }) => {
     const [otherEvents, setOtherEvents] = useState([]);
     const [zoneAvailability, setZoneAvailability] = useState({});
 
+    // Rating states
+    const [userRating, setUserRating] = useState(0);
+    const [reviewText, setReviewText] = useState('');
+    const [averageRating, setAverageRating] = useState(0);
+    const [totalRatings, setTotalRatings] = useState(0);
+    const [isRatingLoading, setIsRatingLoading] = useState(false);
+    const [showReviews, setShowReviews] = useState(false);
+    const [reviews, setReviews] = useState([]);
+
     // Scroll to top when component mounts or event ID changes
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [id]);
+
+    const loadRatings = async (eventId) => {
+        try {
+            // 1. Get average rating (public)
+            const summaryRes = await fetch(`http://localhost:8080/api/ratings/event/${eventId}`);
+            if (summaryRes.ok) {
+                const summary = await summaryRes.json();
+                setAverageRating(summary.averageRating);
+                setTotalRatings(summary.totalRatings);
+            }
+
+            // 2. Get user's personal rating (if logged in)
+            const token = localStorage.getItem('token');
+            if (token) {
+                const userRes = await fetch(`http://localhost:8080/api/ratings/event/${eventId}/user`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (userRes.ok) {
+                    const userData = await userRes.json();
+                    if (userData.hasRated) {
+                        setUserRating(userData.rating);
+                        setReviewText(userData.review || '');
+                    } else {
+                        setUserRating(0);
+                        setReviewText('');
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load ratings", e);
+        }
+    };
+
+    const loadReviewsList = async () => {
+        if (!event?.id) return;
+        try {
+            const res = await fetch(`http://localhost:8080/api/ratings/event/${event.id}/reviews`);
+            if (res.ok) {
+                const data = await res.json();
+                setReviews(data);
+            }
+        } catch (e) {
+            console.error("Failed to load reviews list", e);
+        }
+    };
+
+    const handleOpenReviews = () => {
+        loadReviewsList();
+        setShowReviews(true);
+    };
+
+    const submitRating = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            toast.error('Please login to rate events');
+            return;
+        }
+
+        if (!event?.id) return;
+        if (userRating === 0) {
+            toast.warning('Please select a star rating');
+            return;
+        }
+
+        setIsRatingLoading(true);
+        try {
+            const res = await fetch('http://localhost:8080/api/ratings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    itemId: event.id.toString(),
+                    itemType: 'event',
+                    rating: userRating,
+                    review: reviewText
+                })
+            });
+
+            if (!res.ok) throw new Error('Failed to submit rating');
+
+            const data = await res.json();
+            setUserRating(data.rating); // Ensure sync
+            toast.success('Your review has been submitted!');
+
+            // Refresh average ratings and reviews if open
+            loadRatings(event.id.toString());
+            if (showReviews) {
+                loadReviewsList();
+            }
+        } catch (e) {
+            console.error('Rating submission error', e);
+            toast.error('Failed to submit rating. Please try again.');
+        } finally {
+            setIsRatingLoading(false);
+        }
+    };
 
     // Fetch event details
     useEffect(() => {
@@ -37,6 +148,9 @@ const EventDetails = ({ onBookNow }) => {
                     throw new Error('Failed to load event details');
                 }
                 const full = await res.json();
+
+                // Load ratings immediately after event ID is known
+                loadRatings(full.id.toString());
 
                 let parsedConfig = {};
                 try {
@@ -219,10 +333,10 @@ const EventDetails = ({ onBookNow }) => {
                                     {event.title}
                                 </h1>
 
-                                    <div className="flex flex-wrap items-center gap-4 mb-6">
+                                <div className="flex flex-wrap items-center gap-4 mb-6">
                                     <div className="flex items-center gap-2 text-white/90">
                                         <MapPin className="w-5 h-5" />
-                                            <span>{event.venue || event.address || '—'}</span>
+                                        <span>{event.venue || event.address || '—'}</span>
                                     </div>
                                     {event.dates.length > 0 && (
                                         <div className="flex items-center gap-2 text-white/90">
@@ -376,6 +490,58 @@ const EventDetails = ({ onBookNow }) => {
                             >
                                 Book Tickets Now
                             </button>
+
+                            {/* User Rating Section */}
+                            <div className="pt-4 border-t border-slate-200">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs text-slate-500 font-medium uppercase">Community Rating</p>
+                                    <button
+                                        onClick={handleOpenReviews}
+                                        className="text-xs text-purple-600 font-medium hover:underline"
+                                    >
+                                        View Reviews
+                                    </button>
+                                </div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                                        <span className="font-bold text-slate-900 text-lg">
+                                            {totalRatings > 0 ? `${averageRating}/5` : 'New'}
+                                        </span>
+                                    </div>
+                                    <span className="text-xs text-slate-500">
+                                        ({totalRatings} {totalRatings === 1 ? 'review' : 'reviews'})
+                                    </span>
+                                </div>
+
+                                <p className="text-xs text-slate-500 mb-2 font-medium">Rate this Event</p>
+                                <div className="bg-white rounded-lg border border-slate-200 p-4 flex flex-col items-center">
+                                    <StarRating
+                                        rating={userRating}
+                                        onRate={setUserRating}
+                                        showLabel={true}
+                                        size="lg"
+                                    />
+
+                                    <textarea
+                                        value={reviewText}
+                                        onChange={(e) => setReviewText(e.target.value)}
+                                        placeholder="Write your review here..."
+                                        className="w-full mt-3 p-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 min-h-[80px]"
+                                    />
+
+                                    <button
+                                        onClick={submitRating}
+                                        disabled={isRatingLoading || userRating === 0}
+                                        className={`mt-3 w-full py-2 rounded-md text-sm font-medium transition-colors ${isRatingLoading || userRating === 0
+                                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                : 'bg-purple-600 text-white hover:bg-purple-700'
+                                            }`}
+                                    >
+                                        {isRatingLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (userRating > 0 ? 'Update Review' : 'Submit Review')}
+                                    </button>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 </div>
@@ -428,6 +594,14 @@ const EventDetails = ({ onBookNow }) => {
                     </motion.section>
                 )}
             </div>
+
+            {/* Reviews Modal */}
+            <ReviewsList
+                isOpen={showReviews}
+                onClose={() => setShowReviews(false)}
+                reviews={reviews}
+                title={event.title}
+            />
         </div>
     );
 };
