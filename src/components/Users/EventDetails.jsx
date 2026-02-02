@@ -19,6 +19,7 @@ const EventDetails = ({ onBookNow }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [otherEvents, setOtherEvents] = useState([]);
+    const [zoneAvailability, setZoneAvailability] = useState({});
 
     // Scroll to top when component mounts or event ID changes
     useEffect(() => {
@@ -45,18 +46,58 @@ const EventDetails = ({ onBookNow }) => {
                     parsedConfig = {};
                 }
 
+                const dates = Array.isArray(parsedConfig.dates) ? parsedConfig.dates : [];
+                const zones = Array.isArray(parsedConfig.zones) ? parsedConfig.zones : [];
+
+                const getZoneMinPrice = (zone) => {
+                    const cats = Array.isArray(zone?.categories) ? zone.categories : [];
+                    const prices = cats.map((c) => Number(c?.price)).filter((n) => Number.isFinite(n));
+                    return prices.length ? Math.min(...prices) : null;
+                };
+
                 const normalizedEvent = {
                     id: full.id,
                     title: full.title,
-                    description: full.description || 'An exciting live event awaits you!',
+                    description: full.description || '',
                     poster: full.posterUrl,
-                    venue: full.venue?.name || 'Event Venue',
-                    address: full.address || 'Location details will be provided',
-                    dates: parsedConfig.dates || [],
-                    zones: parsedConfig.zones || [],
+                    venue: full.venue?.name || '',
+                    address: full.address || '',
+                    dates: dates.map((d, idx) => ({
+                        id: d?.id || `date_${idx + 1}`,
+                        date: d?.date || '',
+                        time: d?.time || '',
+                    })),
+                    zones: zones.map((z, idx) => ({
+                        id: z?.id || `zone_${idx + 1}`,
+                        name: z?.name || `Zone ${idx + 1}`,
+                        capacity: Number(z?.capacity) || 0,
+                        categories: Array.isArray(z?.categories) ? z.categories : [],
+                        minPrice: getZoneMinPrice(z),
+                    })),
                 };
 
                 setEvent(normalizedEvent);
+
+                // Fetch live availability for the first date (so UI shows real remaining seats)
+                const firstDateId = normalizedEvent.dates?.[0]?.id;
+                if (firstDateId) {
+                    try {
+                        const availRes = await fetch(
+                            `http://localhost:8080/api/bookings/event/${full.id}/zone-availability?eventDateId=${encodeURIComponent(firstDateId)}`
+                        );
+                        if (availRes.ok) {
+                            const avail = await availRes.json();
+                            setZoneAvailability(avail || {});
+                        } else {
+                            setZoneAvailability({});
+                        }
+                    } catch (e) {
+                        console.error('Failed to load zone availability', e);
+                        setZoneAvailability({});
+                    }
+                } else {
+                    setZoneAvailability({});
+                }
             } catch (err) {
                 console.error('Error loading event:', err);
                 setError('Failed to load event details. Please try again.');
@@ -178,10 +219,10 @@ const EventDetails = ({ onBookNow }) => {
                                     {event.title}
                                 </h1>
 
-                                <div className="flex flex-wrap items-center gap-4 mb-6">
+                                    <div className="flex flex-wrap items-center gap-4 mb-6">
                                     <div className="flex items-center gap-2 text-white/90">
                                         <MapPin className="w-5 h-5" />
-                                        <span>{event.venue}</span>
+                                            <span>{event.venue || event.address || '—'}</span>
                                     </div>
                                     {event.dates.length > 0 && (
                                         <div className="flex items-center gap-2 text-white/90">
@@ -226,7 +267,7 @@ const EventDetails = ({ onBookNow }) => {
                         >
                             <h2 className="text-2xl font-bold text-slate-900 mb-4">About This Event</h2>
                             <p className="text-slate-700 text-lg leading-relaxed">
-                                {event.description}
+                                {event.description || '—'}
                             </p>
                         </motion.section>
 
@@ -273,10 +314,24 @@ const EventDetails = ({ onBookNow }) => {
                                             className="p-4 bg-slate-50 border border-slate-200 rounded-lg"
                                         >
                                             <h3 className="font-semibold text-slate-900 mb-1">{zone.name}</h3>
-                                            <p className="text-purple-600 font-bold text-lg">₹{zone.price}</p>
-                                            {zone.capacity && (
-                                                <p className="text-slate-500 text-sm mt-1">{zone.capacity} seats available</p>
+                                            <p className="text-purple-600 font-bold text-lg">
+                                                ₹{Number.isFinite(zone.minPrice) && zone.minPrice !== null ? zone.minPrice : 0}
+                                            </p>
+
+                                            {zone.categories?.length > 0 && (
+                                                <div className="text-slate-600 text-sm mt-1">
+                                                    {zone.categories
+                                                        .filter((c) => c?.type)
+                                                        .map((c) => `${c.type}: ₹${Number(c.price) || 0}`)
+                                                        .join(' • ')}
+                                                </div>
                                             )}
+
+                                            <p className="text-slate-500 text-sm mt-1">
+                                                {zoneAvailability?.[zone.name]
+                                                    ? `${zoneAvailability[zone.name].available} seats available`
+                                                    : `${zone.capacity || 0} seats available`}
+                                            </p>
                                         </div>
                                     ))}
                                 </div>
@@ -310,12 +365,7 @@ const EventDetails = ({ onBookNow }) => {
                                         </div>
                                     )}
                                     {event.zones.length > 0 && (
-                                        <div>
-                                            <p className="text-xs text-slate-500 mb-1">Starting From</p>
-                                            <p className="font-semibold text-purple-600 text-xl">
-                                                ₹{Math.min(...event.zones.map(z => z.price || 0))}
-                                            </p>
-                                        </div>
+                                        null
                                     )}
                                 </div>
                             </div>

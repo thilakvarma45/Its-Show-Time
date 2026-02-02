@@ -1,17 +1,16 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Calendar, X, Plus, Loader2, Search, Upload, Image as ImageIcon } from 'lucide-react';
-import { fetchPopularMovies, searchMovies } from '../../services/tmdb';
+import { Film, Calendar, X, Plus, Loader2, Search, Upload, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { searchMovies } from '../../services/tmdb';
 import { toast } from 'react-toastify';
 
 const SmartScheduler = ({ owner }) => {
   const [activeTab, setActiveTab] = useState('MOVIE'); // 'MOVIE' | 'EVENT'
-  const [movies, setMovies] = useState([]);
-  const [loadingMovies, setLoadingMovies] = useState(true);
+  const [movieResults, setMovieResults] = useState([]);
+  const [loadingMovies, setLoadingMovies] = useState(false);
   const [movieSearchQuery, setMovieSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMoreMovies, setHasMoreMovies] = useState(true);
+  const [movieDropdownOpen, setMovieDropdownOpen] = useState(false);
 
   // Movie scheduling state
   const [movieForm, setMovieForm] = useState({
@@ -30,30 +29,23 @@ const SmartScheduler = ({ owner }) => {
     vipPrice: ''
   });
 
-  // Fetch movies from TMDB - either search or popular
+  // Search movies from TMDB while typing (debounced)
   useEffect(() => {
     const loadMovies = async () => {
-      setLoadingMovies(true);
       try {
-        let result;
-        if (movieSearchQuery.trim()) {
-          // Search movies if there's a query
-          result = await searchMovies(movieSearchQuery, 1);
-          setMovies(result.movies);
-          setHasMoreMovies(result.totalPages > 1);
-          setCurrentPage(1);
-        } else {
-          // Load popular movies - load first 2 pages for more options
-          const page1 = await fetchPopularMovies(1);
-          const page2 = await fetchPopularMovies(2);
-          setMovies([...page1.movies, ...page2.movies]);
-          setHasMoreMovies(page1.totalPages > 2);
-          setCurrentPage(2);
+        const q = movieSearchQuery.trim();
+        if (!q) {
+          setMovieResults([]);
+          setLoadingMovies(false);
+          return;
         }
+
+        setLoadingMovies(true);
+        const result = await searchMovies(q, 1);
+        setMovieResults(result?.movies || []);
       } catch (err) {
         console.error('Error loading movies:', err);
-        setMovies([]);
-        setHasMoreMovies(false);
+        setMovieResults([]);
       } finally {
         setLoadingMovies(false);
       }
@@ -66,28 +58,6 @@ const SmartScheduler = ({ owner }) => {
 
     return () => clearTimeout(timeoutId);
   }, [movieSearchQuery]);
-
-  // Load more movies function
-  const loadMoreMovies = async () => {
-    if (loadingMovies || !hasMoreMovies) return;
-
-    setLoadingMovies(true);
-    try {
-      let result;
-      if (movieSearchQuery.trim()) {
-        result = await searchMovies(movieSearchQuery, currentPage + 1);
-      } else {
-        result = await fetchPopularMovies(currentPage + 1);
-      }
-      setMovies(prev => [...prev, ...result.movies]);
-      setHasMoreMovies(result.totalPages > currentPage + 1);
-      setCurrentPage(prev => prev + 1);
-    } catch (err) {
-      console.error('Error loading more movies:', err);
-    } finally {
-      setLoadingMovies(false);
-    }
-  };
 
   // Event scheduling state
   const [eventForm, setEventForm] = useState({
@@ -573,14 +543,25 @@ const SmartScheduler = ({ owner }) => {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">Search and Select Movie</label>
 
-              {/* Movie Search Input */}
-              <div className="relative mb-3">
+              {/* Movie Search + Dropdown */}
+              <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search movies by title..."
                   value={movieSearchQuery}
-                  onChange={(e) => setMovieSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setMovieSearchQuery(next);
+                    // Require re-select if user edits the text
+                    setMovieForm((prev) => ({ ...prev, movieId: '' }));
+                    setMovieDropdownOpen(true);
+                  }}
+                  onFocus={() => setMovieDropdownOpen(true)}
+                  onBlur={() => {
+                    // Allow click on dropdown items before closing
+                    setTimeout(() => setMovieDropdownOpen(false), 150);
+                  }}
                   className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent shadow-sm"
                 />
                 {movieSearchQuery && (
@@ -588,71 +569,60 @@ const SmartScheduler = ({ owner }) => {
                     type="button"
                     onClick={() => {
                       setMovieSearchQuery('');
-                      setMovieForm(prev => ({ ...prev, movieId: '' }));
+                      setMovieForm((prev) => ({ ...prev, movieId: '' }));
+                      setMovieResults([]);
+                      setMovieDropdownOpen(false);
                     }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 )}
-              </div>
 
-              {/* Movie Selection Dropdown */}
-              {loadingMovies ? (
-                <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 animate-spin text-violet-500" />
-                  <span className="text-slate-600">
-                    {movieSearchQuery ? 'Searching movies...' : 'Loading movies from TMDB...'}
-                  </span>
-                </div>
-              ) : (
-                <select
-                  name="movieId"
-                  value={movieForm.movieId}
-                  onChange={handleMovieInputChange}
-                  required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-                >
-                  <option value="">
-                    {movieSearchQuery
-                      ? movies.length === 0
-                        ? 'No movies found. Try a different search.'
-                        : `Select from ${movies.length} result${movies.length !== 1 ? 's' : ''}...`
-                      : 'Select a movie from popular movies...'}
-                  </option>
-                  {movies.map(movie => (
-                    <option key={movie.id} value={movie.id}>
-                      {movie.title} ({movie.duration}) - ⭐ {movie.rating} {movie.genre.length > 0 ? `- ${movie.genre[0]}` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {/* Helper text and Load More */}
-              <div className="mt-2 flex items-center justify-between">
-                <p className="text-xs text-slate-500">
-                  {movieSearchQuery
-                    ? `Found ${movies.length} movie${movies.length !== 1 ? 's' : ''} matching "${movieSearchQuery}"`
-                    : `Showing ${movies.length} popular movies. Type above to search for specific movies.`}
-                </p>
-                {hasMoreMovies && !movieSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={loadMoreMovies}
-                    disabled={loadingMovies}
-                    className="text-xs font-semibold text-violet-600 hover:text-violet-700 disabled:text-slate-400 disabled:cursor-not-allowed flex items-center gap-1"
-                  >
+                {/* Dropdown */}
+                {movieDropdownOpen && movieSearchQuery.trim() && (
+                  <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
                     {loadingMovies ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Loading...
-                      </>
+                      <div className="px-4 py-3 flex items-center gap-2 text-slate-600">
+                        <Loader2 className="w-4 h-4 animate-spin text-violet-500" />
+                        <span className="text-sm">Searching…</span>
+                      </div>
+                    ) : movieResults.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-slate-600">
+                        No movies found. Try a different name.
+                      </div>
                     ) : (
-                      'Load More Movies'
+                      <div className="max-h-72 overflow-y-auto">
+                        {movieResults.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setMovieForm((prev) => ({ ...prev, movieId: String(m.id) }));
+                              setMovieSearchQuery(m.title);
+                              setMovieDropdownOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-800 truncate">{m.title}</div>
+                              <div className="text-xs text-slate-500 truncate">
+                                {m.duration ? m.duration : '—'} {m.rating ? `• ⭐ ${m.rating}` : ''}
+                              </div>
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
                     )}
-                  </button>
+                  </div>
                 )}
               </div>
+
+              {/* Selected movie helper */}
+              <p className="mt-2 text-xs text-slate-500">
+                {movieForm.movieId ? `Selected TMDB Movie ID: ${movieForm.movieId}` : 'Type and select a movie from the dropdown.'}
+              </p>
             </div>
 
             {/* Step 3: Run Duration (7 / 14 / Custom) */}

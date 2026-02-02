@@ -42,8 +42,8 @@ const OwnerDashboard = ({ user }) => {
           {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
 
-        {/* Sidebar Navigation - Desktop */}
-        <aside className="hidden lg:block w-64 bg-white border-r border-slate-200 min-h-screen sticky top-16">
+        {/* Sidebar Navigation - Desktop (sticky + scrollable) */}
+        <aside className="hidden lg:block w-64 bg-white border-r border-slate-200 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
           <div className="p-6">
             <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
               Producer Panel

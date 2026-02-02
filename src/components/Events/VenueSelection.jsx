@@ -8,8 +8,8 @@ const VenueSelection = ({ event, onDateSelect }) => {
   const handleDateClick = (date) => {
     setSelectedDate(date.id);
     onDateSelect({
-      dateId: date.id,
-      dateLabel: date.label,
+      id: date.id,
+      label: date.label,
       venue: event.venue,
       address: event.address
     });
@@ -24,7 +24,7 @@ const VenueSelection = ({ event, onDateSelect }) => {
         className="bg-white rounded-lg p-6 border border-slate-200 shadow-md"
       >
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 flex items-center justify-center flex-shrink-0">
             <MapPin className="w-6 h-6 text-white" />
           </div>
           <div className="flex-1">
@@ -39,7 +39,7 @@ const VenueSelection = ({ event, onDateSelect }) => {
       {/* Date/Time Selection */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-purple-600" />
+          <Calendar className="w-5 h-5 text-emerald-600" />
           <h3 className="text-slate-900 font-semibold uppercase tracking-wider text-sm">
             Select Show
           </h3>
@@ -53,11 +53,10 @@ const VenueSelection = ({ event, onDateSelect }) => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 }}
               onClick={() => handleDateClick(date)}
-              className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                selectedDate === date.id
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-transparent text-white'
-                  : 'bg-white border-slate-300 text-slate-700 hover:border-purple-500'
-              }`}
+              className={`w-full p-4 rounded-lg border-2 transition-all text-left ${selectedDate === date.id
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-transparent text-white'
+                  : 'bg-white border-slate-300 text-slate-700 hover:border-emerald-500'
+                }`}
             >
               <div className="font-semibold text-lg">{date.label}</div>
             </motion.button>

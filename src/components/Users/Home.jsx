@@ -1,24 +1,38 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Calendar, SlidersHorizontal, Loader2, Heart, ChevronLeft, ChevronRight, Play, Sparkles } from 'lucide-react';
-import { fetchPopularMovies, searchMovies, fetchTrendingMovies, getMovieRecommendations } from '../../services/tmdb';
+import { Star, Calendar, SlidersHorizontal, Loader2, Heart, Sparkles, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { fetchPopularMovies, searchMovies, getMovieRecommendations, fetchTeluguRecentMovies, fetchRecentMoviesByLanguage } from '../../services/tmdb';
+import MovieCard from '../Movie/MovieCard';
 
 const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishlist, searchQuery = '', setSearchQuery }) => {
   const [sortBy, setSortBy] = useState('name'); // 'name', 'rating', 'latest'
   const [filterType, setFilterType] = useState('all'); // 'all', 'movies', 'events'
+  const [language, setLanguage] = useState('all'); // TMDB original language code
   const [movies, setMovies] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Trending banner state
-  const [trendingMovies, setTrendingMovies] = useState([]);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [bannerLoading, setBannerLoading] = useState(true);
-
   // Recommended movies state
   const [recommendedMovies, setRecommendedMovies] = useState([]);
   const [recommendedLoading, setRecommendedLoading] = useState(true);
+
+  // Curated rows
+  const [teluguMovies, setTeluguMovies] = useState([]);
+
+  // Banner state (powered by already-fetched movies; no extra TMDB calls)
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+
+  // Curated rows (only when not searching movies)
+  const isSearchingMovies = Boolean(searchQuery.trim()) && filterType !== 'events';
+  const isLanguageMode = filterType === 'movies' && !isSearchingMovies && language !== 'all';
+
+  // Reset language when switching away from movies
+  useEffect(() => {
+    if (filterType !== 'movies' && language !== 'all') {
+      setLanguage('all');
+    }
+  }, [filterType, language]);
 
   // Fetch movies from TMDB on mount and when search query changes
   useEffect(() => {
@@ -30,8 +44,12 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
         if (searchQuery.trim() && filterType !== 'events') {
           // Search movies if there's a query
           result = await searchMovies(searchQuery);
+        } else if (filterType === 'movies' && language !== 'all') {
+          // Language mode: recent releases for selected language
+          const list = await fetchRecentMoviesByLanguage(language);
+          result = { movies: list };
         } else if (filterType !== 'events') {
-          // Load popular movies by default
+          // Load just one page (lightweight) for Worldwide row + fallbacks
           result = await fetchPopularMovies(1);
         } else {
           // If filtering by events only, don't fetch movies
@@ -55,7 +73,52 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
     }, searchQuery.trim() ? 500 : 0);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, filterType]);
+  }, [searchQuery, filterType, language]);
+
+  useEffect(() => {
+    const loadCurated = async () => {
+      try {
+        const [telugu] = await Promise.all([fetchTeluguRecentMovies()]);
+        setTeluguMovies((telugu || []).slice(0, 20).map(m => ({ ...m, type: 'movie' })));
+      } catch (e) {
+        console.error('Error loading curated rows:', e);
+        setTeluguMovies([]);
+      }
+    };
+
+    // Only show these on the main Home view (All).
+    if (!isSearchingMovies && !isLanguageMode && filterType === 'all') {
+      loadCurated();
+    }
+  }, [isSearchingMovies, isLanguageMode, filterType]);
+
+  // Banner derived from Worldwide movies (popular page 1)
+  const bannerItems =
+    !isSearchingMovies && !isLanguageMode && filterType !== 'events'
+      ? (movies || []).slice(0, 5).map((m) => ({ ...m, type: 'movie' }))
+      : [];
+
+  // Reset banner index when list changes
+  useEffect(() => {
+    setCurrentBannerIndex(0);
+  }, [bannerItems.length, filterType, isSearchingMovies]);
+
+  // Auto-rotate banner
+  useEffect(() => {
+    if (bannerItems.length <= 1) return;
+    const t = setInterval(() => {
+      setCurrentBannerIndex((prev) => (prev + 1) % bannerItems.length);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [bannerItems.length]);
+
+  const goToPrevBanner = useCallback(() => {
+    setCurrentBannerIndex((prev) => (prev === 0 ? bannerItems.length - 1 : prev - 1));
+  }, [bannerItems.length]);
+
+  const goToNextBanner = useCallback(() => {
+    setCurrentBannerIndex((prev) => (prev + 1) % bannerItems.length);
+  }, [bannerItems.length]);
 
   // Load events from backend once
   useEffect(() => {
@@ -84,81 +147,29 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
     loadEvents();
   }, []);
 
-  // Fetch trending movies for banner
-  useEffect(() => {
-    const loadTrendingMovies = async () => {
-      setBannerLoading(true);
-      try {
-        const trending = await fetchTrendingMovies();
-        setTrendingMovies(trending);
-      } catch (err) {
-        console.error('Error loading trending movies:', err);
-        setTrendingMovies([]);
-      } finally {
-        setBannerLoading(false);
-      }
-    };
-    loadTrendingMovies();
-  }, []);
-
-  // Compute banner items based on filter type
-  const bannerItems = filterType === 'events'
-    ? events.slice(0, 5).map(e => ({
-      id: e.id,
-      title: e.title,
-      overview: 'An exciting live event awaits you!',
-      rating: null,
-      backdrop: e.poster,
-      poster: e.poster,
-      venue: e.venue,
-      type: 'event'
-    }))
-    : trendingMovies.map(m => ({ ...m, type: 'movie' }));
-
-  // Reset banner index when filter changes
-  useEffect(() => {
-    setCurrentBannerIndex(0);
-  }, [filterType]);
-
-  // Auto-transition banner every 5 seconds
-  useEffect(() => {
-    if (bannerItems.length <= 1) return;
-
-    const interval = setInterval(() => {
-      setCurrentBannerIndex((prev) => (prev + 1) % bannerItems.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [bannerItems.length]);
-
-  // Banner navigation handlers
-  const goToPrevBanner = useCallback(() => {
-    setCurrentBannerIndex((prev) =>
-      prev === 0 ? bannerItems.length - 1 : prev - 1
-    );
-  }, [bannerItems.length]);
-
-  const goToNextBanner = useCallback(() => {
-    setCurrentBannerIndex((prev) =>
-      (prev + 1) % bannerItems.length
-    );
-  }, [bannerItems.length]);
-
   // Store search history when user searches and fetch recommendations
   useEffect(() => {
     const fetchRecommendations = async () => {
       setRecommendedLoading(true);
+
+      const movieFallback = (movies || [])
+        .slice(0, 15)
+        .map((m) => ({ ...m, type: 'movie' }));
+
+      const eventFallback = (events || [])
+        .slice(0, 15)
+        .map((e) => ({
+          id: e.id,
+          title: e.title,
+          poster: e.poster,
+          venue: e.venue,
+          type: 'event',
+        }));
+
       try {
         if (filterType === 'events') {
-          // For events filter, show other events as recommendations
-          const eventRecs = events.slice(0, 8).map(e => ({
-            id: e.id,
-            title: e.title,
-            poster: e.poster,
-            venue: e.venue,
-            type: 'event'
-          }));
-          setRecommendedMovies(eventRecs);
+          // For events filter, show events as recommendations
+          setRecommendedMovies(eventFallback);
         } else {
           // For movies/all filter, use movie recommendations
           const searchHistory = JSON.parse(localStorage.getItem('movieSearchHistory') || '[]');
@@ -167,26 +178,34 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
             // Get last searched movie ID and fetch recommendations
             const lastMovieId = searchHistory[searchHistory.length - 1];
             const recommendations = await getMovieRecommendations(lastMovieId);
-            setRecommendedMovies(recommendations.map(m => ({ ...m, type: 'movie' })));
-          } else if (trendingMovies.length > 0) {
-            // Fallback: use first trending movie for recommendations
-            const recommendations = await getMovieRecommendations(trendingMovies[0].id);
-            setRecommendedMovies(recommendations.map(m => ({ ...m, type: 'movie' })));
+            const recs = (recommendations || []).map((m) => ({ ...m, type: 'movie' }));
+            setRecommendedMovies(recs.length ? recs : movieFallback);
+          } else {
+            // Fallback: show popular directly
+            setRecommendedMovies(movieFallback);
           }
         }
       } catch (err) {
         console.error('Error fetching recommendations:', err);
-        setRecommendedMovies([]);
+        setRecommendedMovies(filterType === 'events' ? eventFallback : movieFallback);
       } finally {
         setRecommendedLoading(false);
       }
     };
 
-    // Only fetch if we have trending movies loaded (as fallback) or events loaded
-    if (!bannerLoading || (filterType === 'events' && events.length > 0)) {
+    // Only fetch if we have movies/events data loaded for fallbacks
+    if (
+      !isLanguageMode &&
+      ((filterType !== 'events' && movies.length > 0) || (filterType === 'events' && events.length > 0))
+    ) {
       fetchRecommendations();
     }
-  }, [bannerLoading, trendingMovies, filterType, events]);
+  }, [movies, filterType, events, isLanguageMode]);
+
+  const recommendedDisplay =
+    filterType === 'events'
+      ? (recommendedMovies.length ? recommendedMovies : events.slice(0, 15).map((e) => ({ ...e, type: 'event' })))
+      : (recommendedMovies.length ? recommendedMovies : movies.slice(0, 15).map((m) => ({ ...m, type: 'movie' })));
 
   // Save movie to search history when clicked
   const handleMovieClick = useCallback((movie) => {
@@ -231,6 +250,16 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
       return 0;
     });
 
+  const filteredMovies = filteredItems.filter((i) => i.type === 'movie');
+  const filteredEvents = filteredItems.filter((i) => i.type === 'event');
+
+  // Search results rows (keep scroll rows; not for non-search home layout)
+  const movieRows = Array.from({ length: 4 }, (_, rowIdx) =>
+    filteredMovies.slice(rowIdx * 20, rowIdx * 20 + 20)
+  ).filter((row) => row.length > 0);
+
+  const worldwideMovies = (movies || []).slice(0, 15).map(m => ({ ...m, type: 'movie' }));
+
   return (
     <div className="min-h-screen bg-cinema-light">
       {/* Filters and Sort */}
@@ -263,6 +292,32 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
 
           <div className="h-6 w-px bg-slate-300 mx-2" />
 
+          {/* Language (only when Movies filter is selected) */}
+          {filterType === 'movies' && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-700">Language:</span>
+              <select
+                value={language}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setLanguage(next);
+                  if (next !== 'all') setSortBy('latest');
+                }}
+                className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+              >
+                <option value="all">All</option>
+                <option value="te">Telugu</option>
+                <option value="hi">Hindi</option>
+                <option value="ta">Tamil</option>
+                <option value="ml">Malayalam</option>
+                <option value="kn">Kannada</option>
+                <option value="en">English</option>
+                <option value="ko">Korean</option>
+                <option value="ja">Japanese</option>
+              </select>
+            </div>
+          )}
+
           {/* Sort Options */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-slate-700">Sort by:</span>
@@ -284,90 +339,63 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
         </motion.div>
       </div>
 
-      {/* Trending Banner Carousel */}
-      {!bannerLoading && bannerItems.length > 0 && (
+      {/* Banner Carousel (no extra TMDB calls) */}
+      {!isSearchingMovies && !isLanguageMode && filterType !== 'events' && !loading && !error && bannerItems.length > 0 && (
         <div className="px-4 sm:px-8 py-4">
-          <div className="relative w-full h-[400px] sm:h-[450px] md:h-[500px] overflow-hidden bg-black rounded-2xl">
+          <div className="relative w-full h-[360px] sm:h-[420px] md:h-[480px] overflow-hidden bg-black rounded-2xl">
             <AnimatePresence initial={false}>
               <motion.div
-                key={currentBannerIndex}
-                initial={{ opacity: 0, x: 100 }}
+                key={bannerItems[currentBannerIndex]?.id}
+                initial={{ opacity: 0, x: 80 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                exit={{ opacity: 0, x: -80 }}
+                transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
                 className="absolute inset-0"
               >
-                {/* Backdrop Image */}
+                {/* Background */}
                 <div
                   className="absolute inset-0 bg-cover bg-center"
                   style={{
-                    backgroundImage: `url(${bannerItems[currentBannerIndex]?.backdrop || bannerItems[currentBannerIndex]?.poster})`
+                    backgroundImage: `url(${bannerItems[currentBannerIndex]?.backdrop || bannerItems[currentBannerIndex]?.posterOriginal || bannerItems[currentBannerIndex]?.poster})`,
                   }}
                 />
-
-                {/* Gradient Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
 
                 {/* Content */}
-                <div className="absolute inset-0 flex items-center">
-                  <div className="max-w-7xl mx-auto px-6 sm:px-8 w-full">
+                <div className="absolute inset-0 flex items-end sm:items-center">
+                  <div className="max-w-7xl mx-auto px-6 sm:px-8 w-full pb-6 sm:pb-0">
                     <motion.div
-                      initial={{ opacity: 0, y: 30 }}
+                      initial={{ opacity: 0, y: 18 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3, duration: 0.5 }}
+                      transition={{ delay: 0.18, duration: 0.45 }}
                       className="max-w-2xl"
                     >
-                      {/* Badge - different for movies vs events */}
-                      <div className="flex items-center gap-2 mb-4">
-                        {bannerItems[currentBannerIndex]?.type === 'event' ? (
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full">
-                            <span className="text-white text-xs font-bold uppercase tracking-wider">🎭 Featured Event</span>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-500 rounded-full">
-                              <span className="text-white text-xs font-bold uppercase tracking-wider">🔥 Trending Now</span>
-                            </div>
-                            {bannerItems[currentBannerIndex]?.rating && (
-                              <div className="flex items-center gap-1 px-2 py-1 bg-white/20 backdrop-blur-sm rounded-full">
-                                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                <span className="text-white text-sm font-semibold">{bannerItems[currentBannerIndex]?.rating}</span>
-                              </div>
-                            )}
-                          </>
-                        )}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-500 rounded-full">
+                          <span className="text-white text-xs font-bold uppercase tracking-wider">Featured</span>
+                        </div>
+                        <div className="flex items-center gap-1 px-2 py-1 bg-white/15 backdrop-blur-sm rounded-full">
+                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                          <span className="text-white text-sm font-semibold">{bannerItems[currentBannerIndex]?.rating}</span>
+                        </div>
                       </div>
 
-                      {/* Title */}
-                      <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
+                      <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
                         {bannerItems[currentBannerIndex]?.title}
                       </h2>
 
-                      {/* Overview / Venue */}
-                      <p className="text-slate-200 text-sm sm:text-base line-clamp-2 sm:line-clamp-3 mb-6 leading-relaxed">
-                        {bannerItems[currentBannerIndex]?.type === 'event'
-                          ? `📍 ${bannerItems[currentBannerIndex]?.venue || 'Venue details available on booking'}`
-                          : bannerItems[currentBannerIndex]?.overview}
+                      <p className="text-slate-200 text-sm sm:text-base line-clamp-2 sm:line-clamp-3 mb-5 leading-relaxed">
+                        {bannerItems[currentBannerIndex]?.overview || 'Explore this movie now.'}
                       </p>
 
-                      {/* CTA Buttons */}
                       <div className="flex items-center gap-4">
                         <button
-                          onClick={() => {
-                            if (bannerItems[currentBannerIndex]?.type === 'event') {
-                              onEventSelect({ id: bannerItems[currentBannerIndex]?.id });
-                            } else {
-                              handleMovieClick({ id: bannerItems[currentBannerIndex]?.id, title: bannerItems[currentBannerIndex]?.title });
-                            }
-                          }}
-                          className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-lg transition-all shadow-lg hover:scale-105 ${bannerItems[currentBannerIndex]?.type === 'event'
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white hover:shadow-purple-500/30'
-                            : 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white hover:shadow-violet-500/30'
-                            }`}
+                          onClick={() => handleMovieClick(bannerItems[currentBannerIndex])}
+                          className="flex items-center gap-2 px-6 py-3 font-semibold rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white transition-all shadow-lg hover:scale-105 hover:shadow-violet-500/30"
                         >
                           <Play className="w-5 h-5 fill-white" />
-                          Book Now
+                          View & Book
                         </button>
                       </div>
                     </motion.div>
@@ -376,48 +404,29 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
               </motion.div>
             </AnimatePresence>
 
-            {/* Navigation Arrows */}
-            <button
-              onClick={goToPrevBanner}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-all z-10 group"
-            >
-              <ChevronLeft className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            </button>
-            <button
-              onClick={goToNextBanner}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-all z-10 group"
-            >
-              <ChevronRight className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            </button>
-
-            {/* Indicator Dots */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-              {bannerItems.map((_, index) => (
+            {/* Navigation */}
+            {bannerItems.length > 1 && (
+              <>
                 <button
-                  key={index}
-                  onClick={() => setCurrentBannerIndex(index)}
-                  className={`transition-all duration-300 ${index === currentBannerIndex
-                    ? 'w-8 h-2 bg-white rounded-full'
-                    : 'w-2 h-2 bg-white/50 rounded-full hover:bg-white/70'
-                    }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Banner Loading Skeleton */}
-      {bannerLoading && (
-        <div className="px-4 sm:px-8 py-4">
-          <div className="w-full h-[400px] sm:h-[450px] md:h-[500px] bg-gradient-to-r from-slate-800 to-slate-700 animate-pulse flex items-center justify-center rounded-2xl">
-            <Loader2 className="w-10 h-10 animate-spin text-white/50" />
+                  onClick={goToPrevBanner}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-all z-10"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={goToNextBanner}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center hover:bg-black/60 transition-all z-10"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {/* Recommended Movies Section */}
-      {recommendedMovies.length > 0 && !recommendedLoading && (
+      {!isSearchingMovies && !isLanguageMode && recommendedDisplay.length > 0 && !recommendedLoading && (
         <div className="px-4 sm:px-8 py-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -427,8 +436,8 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
             {/* Section Header */}
             <div className="flex items-center gap-3 mb-5">
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${filterType === 'events'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500'
-                  : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500'
+                : 'bg-gradient-to-r from-amber-500 to-orange-500'
                 }`}>
                 <Sparkles className="w-4 h-4 text-white" />
                 <span className="text-white text-sm font-bold">
@@ -441,58 +450,14 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
             {/* Horizontal Scroll Container */}
             <div className="relative">
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {recommendedMovies.map((item, index) => (
-                  <motion.div
+                {recommendedDisplay.map((item, index) => (
+                  <MovieCard
                     key={item.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="flex-shrink-0 w-[180px] group cursor-pointer"
+                    item={item}
                     onClick={() => item.type === 'event' ? onEventSelect(item) : handleMovieClick(item)}
-                  >
-                    <div className="relative overflow-hidden rounded-xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                      {/* Poster */}
-                      {item.poster ? (
-                        <img
-                          src={item.poster}
-                          alt={item.title}
-                          className="w-full aspect-[2/3] object-cover"
-                        />
-                      ) : (
-                        <div className="w-full aspect-[2/3] bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                          <span className="text-4xl">🎭</span>
-                        </div>
-                      )}
-
-                      {/* Badge - Rating for movies, Event label for events */}
-                      {item.type === 'event' ? (
-                        <div className="absolute top-2 right-2 px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full">
-                          <span className="text-white text-xs font-semibold">Event</span>
-                        </div>
-                      ) : (
-                        <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/70 backdrop-blur-sm rounded-full">
-                          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                          <span className="text-white text-xs font-semibold">{item.rating}</span>
-                        </div>
-                      )}
-
-                      {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
-                        <button className={`w-full py-2 text-white text-sm font-semibold rounded-lg transition-all ${item.type === 'event'
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
-                            : 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700'
-                          }`}>
-                          Book Now
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Title & Subtitle */}
-                    <h4 className="mt-2 text-slate-800 font-medium text-sm truncate">{item.title}</h4>
-                    <p className="text-slate-500 text-xs">
-                      {item.type === 'event' ? item.venue : item.genre?.slice(0, 2).join(' • ')}
-                    </p>
-                  </motion.div>
+                    onToggleWishlist={() => onToggleWishlist(item)}
+                    isInWishlist={wishlist.some(w => w.id === item.id && w.type === item.type)}
+                  />
                 ))}
               </div>
             </div>
@@ -501,7 +466,7 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
       )}
 
       {/* Recommended Loading Skeleton */}
-      {recommendedLoading && (
+      {!isSearchingMovies && !isLanguageMode && recommendedLoading && (
         <div className="px-4 sm:px-8 py-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-48 h-8 bg-slate-200 rounded-full animate-pulse" />
@@ -520,7 +485,7 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
       )}
 
       <div className="px-4 sm:px-8 py-8">
-        {/* Mixed Grid - Movies & Events */}
+        {/* Movies / Events */}
         {loading ? (
           <motion.div
             initial={{ opacity: 0 }}
@@ -552,104 +517,228 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
             <p className="text-slate-600">Try adjusting your search or filters</p>
           </motion.div>
         ) : (
-          <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5 sm:gap-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            {filteredItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="group cursor-pointer"
-                onClick={() => item.type === 'movie' ? handleMovieClick(item) : onEventSelect(item)}
-              >
-                <div className="relative overflow-hidden rounded-lg bg-white transition-transform duration-300 hover:scale-105 shadow-lg">
-                  {/* Event Badge */}
-                  {item.type === 'event' && (
-                    <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full uppercase tracking-wide">
-                      Event
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+            {/* Curated rows (only when not searching) */}
+            {!isSearchingMovies && !isLanguageMode && filterType === 'all' && (
+              <div className="space-y-6 mb-8">
+                {teluguMovies.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500">
+                        <span className="text-white text-sm font-bold">Telugu Movies</span>
+                      </div>
+                      <div className="flex-1 h-px bg-slate-200" />
                     </div>
-                  )}
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                      {teluguMovies.slice(0, 15).map((item, index) => (
+                        <MovieCard
+                          key={item.id}
+                          item={item}
+                          onClick={() => handleMovieClick(item)}
+                          onToggleWishlist={() => onToggleWishlist(item)}
+                          isInWishlist={wishlist.some(w => w.id === item.id && w.type === item.type)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                  {/* Wishlist Heart Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleWishlist({ ...item, type: item.type });
-                    }}
-                    className={`absolute top-2 left-2 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-all ${wishlist.some(w => w.id === item.id && w.type === item.type)
-                      ? 'bg-red-500 text-white shadow-lg'
-                      : 'bg-black/50 text-white hover:bg-red-500'
-                      }`}
-                  >
-                    <Heart
-                      className={`w-5 h-5 ${wishlist.some(w => w.id === item.id && w.type === item.type)
-                        ? 'fill-white'
-                        : ''
-                        }`}
+                {worldwideMovies.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-slate-700 to-slate-900">
+                        <span className="text-white text-sm font-bold">Popular Movies</span>
+                      </div>
+                      <div className="flex-1 h-px bg-slate-200" />
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                      {worldwideMovies.slice(0, 15).map((item, index) => (
+                        <MovieCard
+                          key={item.id}
+                          item={item}
+                          onClick={() => handleMovieClick(item)}
+                          onToggleWishlist={() => onToggleWishlist(item)}
+                          isInWishlist={wishlist.some(w => w.id === item.id && w.type === item.type)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Language mode (Movies filter + language selected): show only recent releases */}
+            {!isSearchingMovies && isLanguageMode && filterType === 'movies' && (
+              <div className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-purple-600">
+                    <span className="text-white text-sm font-bold">Recent Releases</span>
+                  </div>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+
+                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {filteredMovies.slice(0, 15).map((item, index) => (
+                    <MovieCard
+                      key={item.id}
+                      item={item}
+                      onClick={() => handleMovieClick(item)}
+                      onToggleWishlist={() => onToggleWishlist(item)}
+                      isInWishlist={wishlist.some(w => w.id === item.id && w.type === item.type)}
                     />
-                  </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-                  {/* Poster with layoutId for shared element transition */}
-                  <motion.img
-                    layoutId={`poster-${item.id}`}
-                    src={item.poster}
-                    alt={item.title}
-                    className="w-full aspect-[2/3] object-cover"
-                  />
+            {/* Search mode: show only searched movies (no banners/recommended/curated) */}
+            {isSearchingMovies && filterType !== 'events' && (
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-500 to-purple-500">
+                    <span className="text-white text-sm font-bold">Search Results</span>
+                  </div>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+              </div>
+            )}
 
-                  {/* Overlay on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                    <h3 className="text-white font-bold text-lg mb-2">{item.title}</h3>
-                    {item.type === 'movie' ? (
-                      <>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                          <span className="text-white text-sm">{item.rating}</span>
-                          <span className="text-slate-300 text-sm">• {item.duration}</span>
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                          {item.genre.map((g) => (
-                            <span
-                              key={g}
-                              className="text-xs px-2 py-1 bg-blue-600/30 text-blue-300 rounded"
+            {isSearchingMovies && filterType !== 'events' && movieRows.length > 0 && (
+              <div className="space-y-6">
+                {movieRows.map((row, rowIdx) => (
+                  <div key={rowIdx} className="relative">
+                    <div
+                      className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      {row.map((item, index) => (
+                        <motion.div
+                          key={item.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                          className="flex-shrink-0 w-[180px] sm:w-[200px] group cursor-pointer"
+                          onClick={() => handleMovieClick(item)}
+                        >
+                          <div className="relative overflow-hidden rounded-lg bg-white transition-transform duration-300 hover:scale-105 shadow-lg">
+                            {/* Wishlist Heart Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleWishlist({ ...item, type: item.type });
+                              }}
+                              className={`absolute top-2 left-2 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-all ${wishlist.some(w => w.id === item.id && w.type === item.type)
+                                ? 'bg-red-500 text-white shadow-lg'
+                                : 'bg-black/50 text-white hover:bg-red-500'
+                                }`}
                             >
-                              {g}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <>
+                              <Heart
+                                className={`w-5 h-5 ${wishlist.some(w => w.id === item.id && w.type === item.type)
+                                  ? 'fill-white'
+                                  : ''
+                                  }`}
+                              />
+                            </button>
+
+                            <motion.img
+                              layoutId={`poster-${item.id}`}
+                              src={item.poster}
+                              alt={item.title}
+                              className="w-full aspect-[2/3] object-cover"
+                            />
+
+                            {/* Overlay on hover */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                              <h3 className="text-white font-bold text-lg mb-2">{item.title}</h3>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                <span className="text-white text-sm">{item.rating}</span>
+                                <span className="text-slate-300 text-sm">• {item.duration}</span>
+                              </div>
+                              <div className="flex gap-2 flex-wrap">
+                                {(item.genre || []).map((g) => (
+                                  <span key={g} className="text-xs px-2 py-1 bg-blue-600/30 text-blue-300 rounded">
+                                    {g}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Info below poster */}
+                          <div className="mt-3">
+                            <h3 className="text-slate-900 font-semibold text-sm truncate">{item.title}</h3>
+                            <p className="text-slate-600 text-xs mt-1">{(item.genre || []).join(', ')}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {filterType === 'events' && (
+              <motion.div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5 sm:gap-6">
+                {filteredEvents.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="group cursor-pointer"
+                    onClick={() => onEventSelect(item)}
+                  >
+                    <div className="relative overflow-hidden rounded-lg bg-white transition-transform duration-300 hover:scale-105 shadow-lg">
+                      <div className="absolute top-2 right-2 z-10 px-2 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                        Event
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleWishlist({ ...item, type: item.type });
+                        }}
+                        className={`absolute top-2 left-2 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-all ${wishlist.some(w => w.id === item.id && w.type === item.type)
+                          ? 'bg-red-500 text-white shadow-lg'
+                          : 'bg-black/50 text-white hover:bg-red-500'
+                          }`}
+                      >
+                        <Heart
+                          className={`w-5 h-5 ${wishlist.some(w => w.id === item.id && w.type === item.type)
+                            ? 'fill-white'
+                            : ''
+                            }`}
+                        />
+                      </button>
+
+                      <motion.img
+                        layoutId={`poster-${item.id}`}
+                        src={item.poster}
+                        alt={item.title}
+                        className="w-full aspect-[2/3] object-cover"
+                      />
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                        <h3 className="text-white font-bold text-lg mb-2">{item.title}</h3>
                         <div className="flex items-center gap-2 mb-2">
                           <Calendar className="w-4 h-4 text-purple-300" />
                           <span className="text-white text-sm">{item.venue}</span>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                          <span className="text-xs px-2 py-1 bg-purple-600/30 text-purple-300 rounded">
-                            Live Event
-                          </span>
+                          <span className="text-xs px-2 py-1 bg-purple-600/30 text-purple-300 rounded">Live Event</span>
                         </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                      </div>
+                    </div>
 
-                {/* Info below poster */}
-                <div className="mt-3">
-                  <h3 className="text-slate-900 font-semibold text-sm truncate">
-                    {item.title}
-                  </h3>
-                  <p className="text-slate-600 text-xs mt-1">
-                    {item.type === 'movie' ? item.genre.join(', ') : item.venue}
-                  </p>
-                </div>
+                    <div className="mt-3">
+                      <h3 className="text-slate-900 font-semibold text-sm truncate">{item.title}</h3>
+                      <p className="text-slate-600 text-xs mt-1">{item.venue}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </motion.div>
-            ))}
+            )}
           </motion.div>
         )}
       </div>

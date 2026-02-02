@@ -7,6 +7,7 @@ const BookingDetails = ({ item, onBack }) => {
   const [filterTime, setFilterTime] = useState('all'); // placeholder for future backend-based filter
   const [bookings, setBookings] = useState([]);
   const [eventZoneNameById, setEventZoneNameById] = useState({});
+  const [eventDatesById, setEventDatesById] = useState({});
 
   // If this is an event, load its eventConfig once so we can show Zone NAME instead of zoneId.
   useEffect(() => {
@@ -33,14 +34,23 @@ const BookingDetails = ({ item, onBack }) => {
         }
 
         const zones = Array.isArray(parsed?.zones) ? parsed.zones : [];
-        const map = zones.reduce((acc, z) => {
+        const zoneMap = zones.reduce((acc, z) => {
           if (z?.id) acc[String(z.id)] = z?.name || String(z.id);
           return acc;
         }, {});
-        setEventZoneNameById(map);
+        setEventZoneNameById(zoneMap);
+
+        const dates = Array.isArray(parsed?.dates) ? parsed.dates : [];
+        const dateMap = dates.reduce((acc, d) => {
+          if (d?.id) acc[String(d.id)] = { date: d.date, time: d.time };
+          return acc;
+        }, {});
+        setEventDatesById(dateMap);
+
       } catch (e) {
         console.error('Error loading event zones:', e);
         setEventZoneNameById({});
+        setEventDatesById({});
       }
     };
 
@@ -112,15 +122,20 @@ const BookingDetails = ({ item, onBack }) => {
             ticketCount = 0;
           }
 
-          // Use show date and time if available, otherwise fall back to bookedAt date
-          const showDate = b.show?.showDate || (b.bookedAt ? b.bookedAt.substring(0, 10) : '');
-          const showTime = b.show?.showTime || '';
+          // Use show date and time if available, otherwise check eventDateId, else fall back to bookedAt date
+          let showDate = b.show?.showDate || (b.bookedAt ? b.bookedAt.substring(0, 10) : '');
+          let showTime = b.show?.showTime || '';
+
+          if (b.type === 'EVENT' && b.eventDateId && eventDatesById[b.eventDateId]) {
+            showDate = eventDatesById[b.eventDateId].date;
+            showTime = eventDatesById[b.eventDateId].time;
+          }
 
           // Venue Name
           const venueName = b.show?.venue?.name || b.event?.venue?.name || (b.event?.address) || 'Unknown Venue';
 
           return {
-            id: `BK${b.id}`,
+            id: b.bookingCode || `BK${b.id}`,
             userName: b.userName == null ? 'Guest' : b.userName,
             seats,
             ticketCount,
@@ -139,7 +154,7 @@ const BookingDetails = ({ item, onBack }) => {
       }
     };
     loadBookings();
-  }, [item, eventZoneNameById]);
+  }, [item, eventZoneNameById, eventDatesById]);
 
   // Filter bookings
   const filteredBookings = bookings.filter(booking => {
@@ -343,9 +358,9 @@ const BookingDetails = ({ item, onBack }) => {
                     {/* Desktop Layout */}
                     <div className="hidden lg:flex items-center justify-between">
                       <div className="flex items-center gap-6 flex-1">
-                        <div className="w-24">
+                        <div className="w-40">
                           <p className="text-xs text-slate-500 mb-1">Booking ID</p>
-                          <p className="font-mono font-bold text-slate-800">{booking.id}</p>
+                          <p className="font-mono font-bold text-slate-800 text-sm truncate" title={booking.id}>{booking.id}</p>
                         </div>
                         <div className="flex-1">
                           <p className="text-xs text-slate-500 mb-1">Customer Name</p>
