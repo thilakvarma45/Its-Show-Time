@@ -71,6 +71,7 @@ const Register = ({ onAuthSuccess }) => {
       if (authData.token) {
         localStorage.setItem('token', authData.token);
       }
+      localStorage.setItem('authUser', JSON.stringify(authData));
 
       // Show success message briefly
       setShowSuccess(true);

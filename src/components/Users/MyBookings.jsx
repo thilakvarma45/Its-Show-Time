@@ -89,6 +89,7 @@ const MyBookings = ({ user, onBack }) => {
 
           return {
             id: b.id,
+            bookingCode: b.bookingCode,
             type: b.type === 'EVENT' ? 'event' : 'movie',
             title,
             poster,
@@ -212,7 +213,7 @@ const MyBookings = ({ user, onBack }) => {
                       <p className="text-2xl font-bold text-slate-900">{formatCurrency(booking.price)}</p>
                     </div>
                     <a
-                      href={`/ticket/${booking.id}`}
+                      href={`/ticket/${booking.bookingCode || booking.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"

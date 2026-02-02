@@ -46,6 +46,8 @@ const Login = ({ onAuthSuccess }) => {
       if (user.token) {
         localStorage.setItem('token', user.token);
       }
+      // Persist user so refresh keeps session
+      localStorage.setItem('authUser', JSON.stringify(user));
 
       onAuthSuccess(user);
     } catch (err) {
