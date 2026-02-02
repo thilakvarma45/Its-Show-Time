@@ -397,7 +397,7 @@ const LandingPage = () => {
               <span className="text-lg font-bold text-white">Show Time</span>
             </div>
             <p className="text-white/70 text-sm font-light">
-              © 2026 Show Time. All rights reserved.
+             Copyright © 2026 Show Time. All rights reserved.
             </p>
           </div>
         </div>
