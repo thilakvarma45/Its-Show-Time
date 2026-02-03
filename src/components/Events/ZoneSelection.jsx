@@ -18,14 +18,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
 
       try {
         const url = `http://localhost:8080/api/bookings/event/${event.id}/zone-availability?eventDateId=${selectedDate.id}`;
-<<<<<<< HEAD
         const response = await fetch(url);
-=======
-        const token = localStorage.getItem('token');
-        const response = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
->>>>>>> 64451371a53ebc71e3785776ada2677f191cde00
 
         if (response.ok) {
           const availability = await response.json();
@@ -160,14 +153,8 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-<<<<<<< HEAD
               className={`backdrop-blur-xl bg-white/5 rounded-2xl border-2 p-6 shadow-lg ${isZoneFull ? 'opacity-60 border-red-400 bg-red-50/20' : zone.color
                 }`}
-=======
-              className={`rounded-2xl border p-6 shadow-sm ${
-                isZoneFull ? 'opacity-70 border-red-300 bg-red-50' : 'border-slate-200 bg-white'
-              }`}
->>>>>>> 64451371a53ebc71e3785776ada2677f191cde00
             >
               {/* Zone Header */}
               <div className="mb-4">
@@ -188,10 +175,10 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                   {availability && (
                     <div className="flex items-center gap-3">
                       <p className={`text-sm font-semibold ${availability.available === 0
-                          ? 'text-red-600'
-                          : availability.available < 20
-                            ? 'text-orange-600'
-                            : 'text-green-600'
+                        ? 'text-red-600'
+                        : availability.available < 20
+                          ? 'text-orange-600'
+                          : 'text-green-600'
                         }`}>
                         {availability.available} available
                       </p>
@@ -216,11 +203,7 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                   return (
                     <div
                       key={category.type}
-<<<<<<< HEAD
                       className={`flex items-center justify-between p-3 rounded-lg backdrop-blur-sm ${isZoneFull ? 'bg-red-50/50 opacity-60' : 'bg-white/10'
-=======
-                      className={`flex items-center justify-between p-3 rounded-lg ${isZoneFull ? 'bg-red-50/50 opacity-60' : 'bg-slate-50'
->>>>>>> 64451371a53ebc71e3785776ada2677f191cde00
                         }`}
                     >
                       <div className="flex-1">
@@ -244,12 +227,8 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
                           onClick={() => updateQuantity(zone.name, category.type, 1)}
                           disabled={!canAddMore}
                           className={`w-8 h-8 rounded-lg text-white transition-all flex items-center justify-center shadow-md ${canAddMore
-<<<<<<< HEAD
-                              ? 'bg-purple-600 hover:bg-purple-700 cursor-pointer'
-=======
-                              ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
->>>>>>> 64451371a53ebc71e3785776ada2677f191cde00
-                              : 'bg-slate-400 cursor-not-allowed'
+                            ? 'bg-purple-600 hover:bg-purple-700 cursor-pointer'
+                            : 'bg-slate-400 cursor-not-allowed'
                             }`}
                           title={!canAddMore ? (isZoneFull ? 'Zone is sold out' : 'Zone capacity reached with your current selection') : 'Add pass'}
                         >
@@ -318,4 +297,3 @@ const ZoneSelection = ({ event, selectedDate, onContinue }) => {
 };
 
 export default ZoneSelection;
-
