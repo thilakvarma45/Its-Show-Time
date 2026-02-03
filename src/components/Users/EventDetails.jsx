@@ -11,7 +11,8 @@ import {
     Loader2,
     ChevronRight,
     Clock,
-    Users
+    Users,
+    Star
 } from 'lucide-react';
 
 import ReviewsList from '../common/ReviewsList';
@@ -534,8 +535,8 @@ const EventDetails = ({ onBookNow }) => {
                                         onClick={submitRating}
                                         disabled={isRatingLoading || userRating === 0}
                                         className={`mt-3 w-full py-2 rounded-md text-sm font-medium transition-colors ${isRatingLoading || userRating === 0
-                                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                                : 'bg-purple-600 text-white hover:bg-purple-700'
+                                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                            : 'bg-purple-600 text-white hover:bg-purple-700'
                                             }`}
                                     >
                                         {isRatingLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (userRating > 0 ? 'Update Review' : 'Submit Review')}

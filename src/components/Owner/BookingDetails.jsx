@@ -57,108 +57,103 @@ const BookingDetails = ({ item, onBack }) => {
     loadEventZones();
   }, [item]);
 
+  const [analytics, setAnalytics] = useState(null);
+
   useEffect(() => {
-    const loadBookings = async () => {
+    const loadData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:8080/api/bookings', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) {
-          throw new Error('Failed to load bookings');
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        // Determine correct ID and endpoints
+        const isMovie = item.type === 'movie';
+        const idToUse = isMovie ? (item.tmdbMovieId ?? item.id) : item.id;
+
+        const analyticsUrl = `http://localhost:8080/api/analytics/${isMovie ? 'movie' : 'event'}/${idToUse}`;
+        const bookingsUrl = `http://localhost:8080/api/bookings/${isMovie ? 'movie' : 'event'}/${idToUse}`;
+
+        // Fetch Analytics and Bookings in parallel
+        const [analyticsRes, bookingsRes] = await Promise.all([
+          fetch(analyticsUrl, { headers }),
+          fetch(bookingsUrl, { headers })
+        ]);
+
+        if (analyticsRes.ok) {
+          setAnalytics(await analyticsRes.json());
         }
-        const data = await res.json();
 
-        // Filter bookings related to this item (movie or event)
-        const related = data.filter((b) => {
-          const movieId = item.tmdbMovieId ?? item.id;
-          if (item.type === 'movie') {
-            return (
-              b.type === 'MOVIE' &&
-              b.show &&
-              typeof b.show.tmdbMovieId === 'number' &&
-              b.show.tmdbMovieId === movieId
-            );
-          }
-          // event
-          return b.type === 'EVENT' && b.event && b.event.id === item.id;
-        });
+        if (bookingsRes.ok) {
+          const data = await bookingsRes.json();
 
-        const normalized = related.map((b) => {
-          let seats = [];
-          let ticketCount = 0;
+          // Normalize bookings for the table (we don't need to filter anymore!)
+          const normalized = data.map((b) => {
+            let seats = [];
+            let ticketCount = 0;
 
-          try {
-            if (b.bookingDetails) {
-              const details = JSON.parse(b.bookingDetails);
+            try {
+              if (b.bookingDetails) {
+                const details = JSON.parse(b.bookingDetails);
 
-              // Movie bookings: seats array
-              if (b.type === 'MOVIE' && Array.isArray(details.seats)) {
-                seats = details.seats;
-                ticketCount = seats.length;
+                // Movie bookings: seats array
+                if (b.type === 'MOVIE' && Array.isArray(details.seats)) {
+                  seats = details.seats;
+                  ticketCount = seats.length;
+                }
+
+                // Event bookings
+                if (b.type === 'EVENT' && details.selectedZones && typeof details.selectedZones === 'object') {
+                  const zoneEntries = Object.entries(details.selectedZones);
+                  const zoneSummaries = zoneEntries.map(([zoneId, categories]) => {
+                    const totalForZone = Object.values(categories || {}).reduce(
+                      (sum, qty) => sum + (Number(qty) || 0),
+                      0
+                    );
+                    ticketCount += totalForZone;
+                    const zoneName = eventZoneNameById[String(zoneId)] || zoneId;
+                    return { label: `${zoneName}: ${totalForZone}`, total: totalForZone };
+                  });
+                  seats = zoneSummaries.filter((z) => z.total > 0).map((z) => z.label);
+                }
               }
-
-              // Event bookings: selectedZones -> zone -> categories -> quantity
-              if (b.type === 'EVENT' && details.selectedZones && typeof details.selectedZones === 'object') {
-                const zoneEntries = Object.entries(details.selectedZones);
-                const zoneSummaries = zoneEntries.map(([zoneId, categories]) => {
-                  const totalForZone = Object.values(categories || {}).reduce(
-                    (sum, qty) => sum + (Number(qty) || 0),
-                    0
-                  );
-                  ticketCount += totalForZone;
-                  const zoneName = eventZoneNameById[String(zoneId)] || zoneId;
-                  return { label: `${zoneName}: ${totalForZone}`, total: totalForZone };
-                });
-
-                // For events, seats array will hold "Zone -> number of tickets" labels
-                seats = zoneSummaries
-                  .filter((z) => z.total > 0)
-                  .map((z) => z.label);
-              }
+            } catch {
+              seats = [];
+              ticketCount = 0;
             }
-          } catch {
-            seats = [];
-            ticketCount = 0;
-          }
 
-          // Use show date and time if available, otherwise check eventDateId, else fall back to bookedAt date
-          let showDate = b.show?.showDate || (b.bookedAt ? b.bookedAt.substring(0, 10) : '');
-          let showTime = b.show?.showTime || '';
+            // Show Date/Time
+            let showDate = b.show?.showDate || (b.bookedAt ? b.bookedAt.substring(0, 10) : '');
+            let showTime = b.show?.showTime || '';
+            if (b.type === 'EVENT' && b.eventDateId && eventDatesById[b.eventDateId]) {
+              showDate = eventDatesById[b.eventDateId].date;
+              showTime = eventDatesById[b.eventDateId].time;
+            }
 
-          if (b.type === 'EVENT' && b.eventDateId && eventDatesById[b.eventDateId]) {
-            showDate = eventDatesById[b.eventDateId].date;
-            showTime = eventDatesById[b.eventDateId].time;
-          }
+            // Venue Name
+            const venueName = b.show?.venue?.name || b.event?.venue?.name || (b.event?.address) || 'Unknown Venue';
 
-          // Venue Name
-          const venueName = b.show?.venue?.name || b.event?.venue?.name || (b.event?.address) || 'Unknown Venue';
-
-          return {
-            id: b.bookingCode || `BK${b.id}`,
-            userName: b.userName == null ? 'Guest' : b.userName,
-            seats,
-            ticketCount,
-            date: showDate,
-            time: showTime,
-            status: b.status || 'CONFIRMED',
-            totalAmount: Number(b.totalAmount) || 0,
-            venueName,
-          };
-        });
-
-        setBookings(normalized);
+            return {
+              id: b.bookingCode || `BK${b.id}`,
+              userName: b.user?.name || b.userName || 'Guest', // Handle both entity and summary structures
+              seats,
+              ticketCount,
+              date: showDate,
+              time: showTime,
+              status: b.status || 'CONFIRMED',
+              totalAmount: Number(b.totalAmount) || 0,
+              venueName,
+            };
+          });
+          setBookings(normalized);
+        }
       } catch (e) {
-        console.error('Error loading bookings for owner details:', e);
-        setBookings([]);
+        console.error('Error loading data:', e);
       }
     };
-    loadBookings();
+    loadData();
   }, [item, eventZoneNameById, eventDatesById]);
 
-  // Filter bookings
+  // Filter bookings (client-side search only)
   const filteredBookings = bookings.filter(booking => {
-    // Filter by search query (ID or Name)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
@@ -218,24 +213,22 @@ const BookingDetails = ({ item, onBack }) => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-lg p-3 sm:p-4">
                 <p className="text-xs sm:text-sm text-slate-600 mb-1">Total Bookings</p>
-                <p className="text-xl sm:text-2xl font-bold text-slate-800">{bookings.length}</p>
+                <p className="text-xl sm:text-2xl font-bold text-slate-800">
+                  {analytics ? analytics.totalBookings : '-'}
+                </p>
               </div>
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-3 sm:p-4">
                 <p className="text-xs sm:text-sm text-slate-600 mb-1">
                   {item.type === 'movie' ? 'Total Seats' : 'Total Passes'}
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-slate-800">
-                  {bookings.reduce(
-                    (sum, b) =>
-                      sum + (typeof b.ticketCount === 'number' ? b.ticketCount : b.seats.length),
-                    0
-                  )}
+                  {analytics ? analytics.totalSeats : '-'}
                 </p>
               </div>
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-3 sm:p-4">
                 <p className="text-xs sm:text-sm text-slate-600 mb-1">Revenue</p>
                 <p className="text-xl sm:text-2xl font-bold text-slate-800">
-                  ₹{bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0).toLocaleString()}
+                  ₹{analytics ? analytics.totalRevenue.toLocaleString() : '-'}
                 </p>
               </div>
             </div>
@@ -243,14 +236,16 @@ const BookingDetails = ({ item, onBack }) => {
         </div>
 
         {/* Revenue by Theatre */}
-        {item.type === 'movie' && bookings.length > 0 && (() => {
-          // Group bookings by theatre
+        {(() => {
           const theatreRevenue = bookings.reduce((acc, booking) => {
-            const theatre = booking.venueName || 'Unknown Venue';
+            // Exclude cancelled bookings from revenue calculation
+            if (booking.status === 'CANCELLED') return acc;
+
+            const theatre = booking.venueName;
             if (!acc[theatre]) {
               acc[theatre] = { revenue: 0, bookings: 0, seats: 0 };
             }
-            acc[theatre].revenue += booking.totalAmount || 0;
+            acc[theatre].revenue += booking.totalAmount;
             acc[theatre].bookings += 1;
             acc[theatre].seats += booking.ticketCount || booking.seats.length;
             return acc;
@@ -260,25 +255,29 @@ const BookingDetails = ({ item, onBack }) => {
             <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 mt-6">
               <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-4">Revenue by Theatre</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {Object.entries(theatreRevenue).map(([theatre, stats]) => (
-                  <div key={theatre} className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-100">
-                    <p className="font-semibold text-slate-800 mb-2 truncate" title={theatre}>{theatre}</p>
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-600">Revenue:</span>
-                        <span className="text-sm font-bold text-indigo-700">₹{stats.revenue.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-600">Bookings:</span>
-                        <span className="text-sm font-semibold text-slate-700">{stats.bookings}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-600">Seats:</span>
-                        <span className="text-sm font-semibold text-slate-700">{stats.seats}</span>
+                {Object.keys(theatreRevenue).length === 0 ? (
+                  <p className="text-sm text-slate-500 col-span-full">No confirmed bookings yet.</p>
+                ) : (
+                  Object.entries(theatreRevenue).map(([theatre, stats]) => (
+                    <div key={theatre} className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-4 border border-indigo-100">
+                      <p className="font-semibold text-slate-800 mb-2 truncate" title={theatre}>{theatre}</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-600">Revenue:</span>
+                          <span className="text-sm font-bold text-indigo-700">₹{stats.revenue.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-600">Bookings:</span>
+                          <span className="text-sm font-semibold text-slate-700">{stats.bookings}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-slate-600">Seats:</span>
+                          <span className="text-sm font-semibold text-slate-700">{stats.seats}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           );
@@ -381,9 +380,20 @@ const BookingDetails = ({ item, onBack }) => {
                           </div>
                         </div>
                         <div className="w-24 flex justify-end">
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full">
-                            <CheckCircle className="w-4 h-4" />
-                            <span className="text-sm font-bold">Okay</span>
+                          <div
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${booking.status === 'CANCELLED'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-emerald-100 text-emerald-700'
+                              }`}
+                          >
+                            {booking.status === 'CANCELLED' ? (
+                              <div className="w-2 h-2 rounded-full bg-red-500" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4" />
+                            )}
+                            <span className="text-sm font-bold">
+                              {booking.status === 'CANCELLED' ? 'Cancelled' : 'Okay'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -396,9 +406,20 @@ const BookingDetails = ({ item, onBack }) => {
                           <p className="text-xs text-slate-500 mb-1">Booking ID</p>
                           <p className="font-mono font-bold text-slate-800 text-sm">{booking.id}</p>
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full">
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="text-sm font-bold">Okay</span>
+                        <div
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${booking.status === 'CANCELLED'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                            }`}
+                        >
+                          {booking.status === 'CANCELLED' ? (
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4" />
+                          )}
+                          <span className="text-sm font-bold">
+                            {booking.status === 'CANCELLED' ? 'Cancelled' : 'Okay'}
+                          </span>
                         </div>
                       </div>
                       <div>

@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Row configuration with pricing categories
 // A–D: Silver, E–K: Gold, L–M: VIP
@@ -81,11 +83,27 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
   const toggleSeat = (seatId, isTaken) => {
     if (isTaken) return;
 
-    setSelectedSeats(prev =>
-      prev.includes(seatId)
-        ? prev.filter(id => id !== seatId)
-        : [...prev, seatId]
-    );
+    setSelectedSeats(prev => {
+      const isSelecting = !prev.includes(seatId);
+
+      if (isSelecting && prev.length >= 6) {
+        toast.error("Only 6 bookings allowed at a time", {
+          position: "top-center",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored",
+        });
+        return prev;
+      }
+
+      return isSelecting
+        ? [...prev, seatId]
+        : prev.filter(id => id !== seatId);
+    });
   };
 
   const getSeatsByRow = (rowId) => {
@@ -130,6 +148,7 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
 
   return (
     <div className="space-y-4 pb-24">
+      <ToastContainer />
       {/* Zoom controls */}
       <div className="flex justify-end items-center gap-3">
         <span className="text-xs text-slate-500 font-medium">
