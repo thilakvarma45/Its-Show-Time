@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formatDate, formatCurrency } from '../../utils/formatters';
+import { toast } from 'react-toastify';
+import StarRating from '../common/StarRating';
 import {
   ArrowLeft,
   Star,
@@ -15,6 +17,8 @@ import {
 } from 'lucide-react';
 import { getMovieById, getMovieRecommendations } from '../../services/tmdb';
 
+import ReviewsList from '../common/ReviewsList';
+
 const MovieDetails = ({ onBookNow }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -24,6 +28,15 @@ const MovieDetails = ({ onBookNow }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [hasShows, setHasShows] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
+
+  // Rating states
+  const [userRating, setUserRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalRatings, setTotalRatings] = useState(0);
+  const [isRatingLoading, setIsRatingLoading] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
+  const [reviews, setReviews] = useState([]);
 
   // Scroll to top when component mounts or movie ID changes
   useEffect(() => {
@@ -37,6 +50,11 @@ const MovieDetails = ({ onBookNow }) => {
       try {
         const data = await getMovieById(id);
         setMovie(data);
+
+        // Load ratings only after movie is loaded
+        if (data && data.id) {
+          loadRatings(data.id.toString());
+        }
       } catch (err) {
         console.error('Error loading movie:', err);
         setError('Failed to load movie details. Please try again.');
@@ -49,6 +67,104 @@ const MovieDetails = ({ onBookNow }) => {
       loadMovie();
     }
   }, [id]);
+
+  const loadRatings = async (movieId) => {
+    try {
+      // 1. Get average rating (public)
+      const summaryRes = await fetch(`http://localhost:8080/api/ratings/movie/${movieId}`);
+      if (summaryRes.ok) {
+        const summary = await summaryRes.json();
+        setAverageRating(summary.averageRating);
+        setTotalRatings(summary.totalRatings);
+      }
+
+      // 2. Get user's personal rating (if logged in)
+      const token = localStorage.getItem('token');
+      if (token) {
+        const userRes = await fetch(`http://localhost:8080/api/ratings/movie/${movieId}/user`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData.hasRated) {
+            setUserRating(userData.rating);
+            setReviewText(userData.review || '');
+          } else {
+            setUserRating(0);
+            setReviewText('');
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load ratings", e);
+    }
+  };
+
+  const loadReviewsList = async () => {
+    if (!movie?.id) return;
+    try {
+      const res = await fetch(`http://localhost:8080/api/ratings/movie/${movie.id}/reviews`);
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data);
+      }
+    } catch (e) {
+      console.error("Failed to load reviews list", e);
+    }
+  };
+
+  const handleOpenReviews = () => {
+    loadReviewsList();
+    setShowReviews(true);
+  };
+
+  const submitRating = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login to rate movies');
+      return;
+    }
+
+    if (!movie?.id) return;
+    if (userRating === 0) {
+      toast.warning('Please select a star rating');
+      return;
+    }
+
+    setIsRatingLoading(true);
+    try {
+      const res = await fetch('http://localhost:8080/api/ratings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          itemId: movie.id.toString(),
+          itemType: 'movie',
+          rating: userRating,
+          review: reviewText
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to submit rating');
+
+      const data = await res.json();
+      setUserRating(data.rating); // Ensure sync
+      toast.success('Your review has been submitted!');
+
+      // Refresh average ratings and reviews if open
+      loadRatings(movie.id.toString());
+      if (showReviews) {
+        loadReviewsList();
+      }
+    } catch (e) {
+      console.error('Rating submission error', e);
+      toast.error('Failed to submit rating. Please try again.');
+    } finally {
+      setIsRatingLoading(false);
+    }
+  };
 
   // Check if there are any shows scheduled for THIS specific movie
   useEffect(() => {
@@ -250,8 +366,8 @@ const MovieDetails = ({ onBookNow }) => {
                   onClick={handleBookNow}
                   disabled={!hasShows}
                   className={`px-8 py-4 rounded-lg font-bold text-lg transition-all shadow-lg flex items-center gap-2 ${hasShows
-                      ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
-                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     }`}
                 >
                   <Film className="w-5 h-5" />
@@ -400,12 +516,57 @@ const MovieDetails = ({ onBookNow }) => {
                     <p className="font-semibold text-slate-900">{movie.duration}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Rating</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs text-slate-500">Community Rating</p>
+                      <button
+                        onClick={handleOpenReviews}
+                        className="text-xs text-blue-600 font-medium hover:underline"
+                      >
+                        View Reviews
+                      </button>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      <span className="font-semibold text-slate-900">{movie.rating}/5</span>
+                      <span className="font-semibold text-slate-900">
+                        {totalRatings > 0 ? `${averageRating}/5` : 'New'}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        ({totalRatings} {totalRatings === 1 ? 'review' : 'reviews'})
+                      </span>
                     </div>
                   </div>
+
+                  {/* User Rating Section */}
+                  <div className="pt-4 border-t border-slate-200">
+                    <p className="text-xs text-slate-500 mb-2 font-medium uppercase">Your Review</p>
+                    <div className="bg-white rounded-lg border border-slate-200 p-4 flex flex-col items-center">
+                      <StarRating
+                        rating={userRating}
+                        onRate={setUserRating}
+                        showLabel={true}
+                        size="lg"
+                      />
+
+                      <textarea
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        placeholder="Write your review here..."
+                        className="w-full mt-3 p-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px]"
+                      />
+
+                      <button
+                        onClick={submitRating}
+                        disabled={isRatingLoading || userRating === 0}
+                        className={`mt-3 w-full py-2 rounded-md text-sm font-medium transition-colors ${isRatingLoading || userRating === 0
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                          }`}
+                      >
+                        {isRatingLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (userRating > 0 ? 'Update Review' : 'Submit Review')}
+                      </button>
+                    </div>
+                  </div>
+
                   {movie.status && (
                     <div>
                       <p className="text-xs text-slate-500 mb-1">Status</p>
@@ -437,8 +598,8 @@ const MovieDetails = ({ onBookNow }) => {
                 onClick={handleBookNow}
                 disabled={!hasShows}
                 className={`w-full px-6 py-3 rounded-lg font-bold transition-all shadow-md ${hasShows
-                    ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
-                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                   }`}
               >
                 {hasShows ? 'Book Tickets' : 'Not Available'}
@@ -499,6 +660,7 @@ const MovieDetails = ({ onBookNow }) => {
           <button
             onClick={() => setSelectedImageIndex(null)}
             className="absolute top-6 right-6 text-white text-2xl font-bold"
+          // ... (rest of image modal)
           >
             ×
           </button>
@@ -510,6 +672,14 @@ const MovieDetails = ({ onBookNow }) => {
           />
         </div>
       )}
+
+      {/* Reviews Modal */}
+      <ReviewsList
+        isOpen={showReviews}
+        onClose={() => setShowReviews(false)}
+        reviews={reviews}
+        title={movie.title}
+      />
     </div>
   );
 };

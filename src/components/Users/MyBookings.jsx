@@ -8,6 +8,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 const MyBookings = ({ user, onBack }) => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     const loadBookings = async () => {
@@ -112,9 +113,145 @@ const MyBookings = ({ user, onBack }) => {
     };
     loadBookings();
   }, [user]);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+
+  // Modal states: 'confirm' | 'processing' | 'refund' | 'success' | 'error'
+  const [cancelStep, setCancelStep] = useState('confirm');
+  const [cancelError, setCancelError] = useState('');
+
+  const handleCancelClick = (booking) => {
+    setSelectedBooking(booking);
+    setCancelStep('confirm');
+    setCancelError('');
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!selectedBooking) return;
+
+    try {
+      setCancelStep('processing');
+      const token = localStorage.getItem('token');
+
+      // Simulate network delay for UX
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const res = await fetch(`http://localhost:8080/api/bookings/${selectedBooking.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to cancel booking');
+      }
+
+      // Success flow
+      setCancelStep('refund');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      setCancelStep('success');
+
+      // Update local state to reflect cancellation
+      setBookings(prev => prev.map(b =>
+        b.id === selectedBooking.id
+          ? { ...b, status: 'cancelled' }
+          : b
+      ));
+
+      // Auto close after success
+      setTimeout(() => {
+        setShowCancelModal(false);
+        setSelectedBooking(null);
+      }, 2000);
+
+    } catch (err) {
+      setCancelStep('error');
+      setCancelError(err.message);
+    }
+  };
+
+  const renderModalContent = () => {
+    switch (cancelStep) {
+      case 'processing':
+        return (
+          <div className="flex flex-col items-center justify-center py-8">
+            <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+            <h3 className="text-lg font-semibold text-slate-900">Processing your request...</h3>
+            <p className="text-sm text-slate-500">Please wait while we cancel your booking.</p>
+          </div>
+        );
+      case 'refund':
+        return (
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <Clock className="w-6 h-6 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900">Refund Initiated</h3>
+            <p className="text-sm text-slate-500">Amount will be credited to your original payment method.</p>
+          </div>
+        );
+      case 'success':
+        return (
+          <div className="flex flex-col items-center justify-center py-8">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900">Cancellation Successful</h3>
+            <p className="text-sm text-slate-500">Your booking has been cancelled.</p>
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="flex flex-col items-center justify-center py-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <span className="text-red-600 text-2xl font-bold">!</span>
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Cancellation Failed</h3>
+            <p className="text-sm text-red-600 text-center mb-6 px-4 py-3 bg-red-50 rounded-lg w-full">
+              {cancelError}
+            </p>
+            <button
+              onClick={() => setShowCancelModal(false)}
+              className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-medium transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        );
+      case 'confirm':
+      default:
+        return (
+          <>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Cancel Booking?</h3>
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to cancel this booking? This action cannot be undone.
+              Refunds will be processed to your original payment method.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+              >
+                Keep Booking
+              </button>
+              <button
+                onClick={confirmCancel}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Confirm Cancellation
+              </button>
+            </div>
+          </>
+        );
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 sm:px-8 py-8 sm:py-12">
+    <div className="min-h-screen bg-slate-50 px-4 sm:px-8 py-8 sm:py-12 relative">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -175,9 +312,12 @@ const MyBookings = ({ user, onBack }) => {
                   <div>
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <h3 className="text-xl font-bold text-slate-900">{booking.title}</h3>
-                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full uppercase">
-                        {booking.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full uppercase ${booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                          }`}>
+                          {booking.status}
+                        </span>
+                      </div>
                     </div>
                     <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
                       {booking.type === 'movie' ? 'Movie' : 'Event'}
@@ -212,14 +352,24 @@ const MyBookings = ({ user, onBack }) => {
                       <p className="text-xs text-slate-600 mb-1">Total Amount</p>
                       <p className="text-2xl font-bold text-slate-900">{formatCurrency(booking.price)}</p>
                     </div>
-                    <a
-                      href={`/ticket/${booking.bookingCode || booking.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                    >
-                      View Ticket
-                    </a>
+                    <div className="flex gap-3">
+                      {booking.status !== 'cancelled' && (
+                        <button
+                          onClick={() => handleCancelClick(booking)}
+                          className="px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors text-sm"
+                        >
+                          Cancel Booking
+                        </button>
+                      )}
+                      <a
+                        href={`/ticket/${booking.bookingCode || booking.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                      >
+                        View Ticket
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -227,6 +377,19 @@ const MyBookings = ({ user, onBack }) => {
           ))
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+          >
+            {renderModalContent()}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
