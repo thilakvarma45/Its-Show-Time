@@ -201,6 +201,16 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
     return generatedDates.filter(date => datesWithShows.has(date.fullDate));
   }, [generatedDates, datesWithShows, allDatesLoaded]);
 
+  // Auto-select the first available date if the current one has no shows
+  useEffect(() => {
+    if (allDatesLoaded && availableDates.length > 0) {
+      const isSelectedAvailable = availableDates.some(d => d.id === selectedDate);
+      if (!isSelectedAvailable) {
+        setSelectedDate(availableDates[0].id);
+      }
+    }
+  }, [allDatesLoaded, availableDates, selectedDate]);
+
   // Filter theatres by search query
   const filteredTheatres = theatres
     .map((theatre) => ({
