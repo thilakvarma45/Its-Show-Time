@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, MapPin, Camera, Save, ArrowLeft } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Camera, Save, ArrowLeft, Bell, Shield, Eye, CreditCard, ChevronRight } from 'lucide-react';
 import { getInitials } from '../utils/formatters';
 import { toast } from 'react-toastify';
 
@@ -116,53 +116,61 @@ const Settings = ({ user, onBack, onSave }) => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 sm:px-8 py-8 sm:py-12">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-4xl mx-auto mb-8"
-      >
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-slate-600 hover:text-slate-800 transition-colors mb-6"
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-6 py-12 lg:px-12">
+
+        {/* Header Navigation */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between mb-16"
         >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm font-medium">Back to Home</span>
-        </button>
+          <button
+            onClick={onBack}
+            className="group flex items-center gap-3 text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-slate-400 group-hover:bg-slate-50 transition-all">
+              <ArrowLeft className="w-5 h-5" />
+            </div>
+            <span className="font-bold tracking-tight">Back to Dashboard</span>
+          </button>
+        </motion.div>
 
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-2">
-          Account Settings
-        </h1>
-        <p className="text-slate-600 text-sm sm:text-base">
-          Manage your profile and preferences
-        </p>
-      </motion.div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
 
-      {/* Settings Container */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="max-w-4xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden"
-      >
-        {/* Profile Picture Section */}
-        <div className="relative h-32 bg-gradient-to-r from-violet-50 via-purple-50 to-fuchsia-50 border-b border-slate-200">
-          <div className="absolute -bottom-16 left-8">
-            <div className="relative group">
-              {formData.profileImageUrl || profileImageFile ? (
-                <img
-                  src={profileImageFile ? URL.createObjectURL(profileImageFile) : formData.profileImageUrl}
-                  alt={formData.name}
-                  className="w-32 h-32 rounded-full object-cover shadow-xl border-4 border-white"
-                />
-              ) : (
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-xl border-4 border-white">
-                  {getInitials(formData.name)}
+          {/* Sidebar / Profile Summary */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-4 space-y-8"
+          >
+            <div>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Settings</h1>
+              <p className="text-slate-500 font-medium">Manage your personal info and preferences.</p>
+            </div>
+
+            {/* Avatar Section */}
+            <div className="relative group w-fit">
+              <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden bg-slate-50 border-4 border-slate-100 shadow-xl relative">
+                {formData.profileImageUrl || profileImageFile ? (
+                  <img
+                    src={profileImageFile ? URL.createObjectURL(profileImageFile) : formData.profileImageUrl}
+                    alt={formData.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-300">
+                    <User className="w-16 h-16" />
+                  </div>
+                )}
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                  <Camera className="w-8 h-8 text-white drop-shadow-md" />
                 </div>
-              )}
-              <label className="absolute bottom-2 right-2 w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center shadow-lg hover:bg-violet-700 transition-colors cursor-pointer">
-                <Camera className="w-5 h-5 text-white" />
+              </div>
+              <label className="absolute -bottom-2 -right-2 w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform cursor-pointer">
+                <Camera className="w-5 h-5" />
                 <input
                   type="file"
                   accept="image/*"
@@ -171,144 +179,138 @@ const Settings = ({ user, onBack, onSave }) => {
                 />
               </label>
             </div>
-          </div>
+
+            {/* Quick Menu (Visual Only for now) */}
+            <div className="hidden lg:block space-y-1 pt-8">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 text-slate-900 font-bold border border-slate-100">
+                <span className="flex items-center gap-3"><User className="w-5 h-5" /> Profile</span>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Main Form Area */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-8"
+          >
+            <form onSubmit={handleSubmit} className="space-y-12">
+
+              {/* Section: Personal Info */}
+              <section>
+                <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                  Personal Information
+                  <div className="h-px flex-1 bg-slate-100 ml-4"></div>
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Full Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-semibold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
+                      placeholder="Enter full name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Location</label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-semibold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
+                      placeholder="City, Country"
+                    />
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2 space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Bio</label>
+                    <textarea
+                      name="bio"
+                      value={formData.bio}
+                      onChange={handleChange}
+                      rows={3}
+                      className="w-full p-4 bg-slate-50 border-none rounded-2xl font-semibold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none resize-none"
+                      placeholder="Brief description for your profile..."
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Section: Contact */}
+              <section>
+                <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                  Contact Details
+                  <div className="h-px flex-1 bg-slate-100 ml-4"></div>
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl font-semibold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
+                        placeholder="name@example.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">Phone Number</label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl font-semibold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
+                        placeholder="+1 (555) 000-0000"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Actions */}
+              <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="px-8 py-4 rounded-xl font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!isEditing || uploadingImage}
+                  className={`flex-1 md:flex-none md:w-48 px-8 py-4 rounded-xl font-bold text-white shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2 ${isEditing && !uploadingImage
+                    ? 'bg-black hover:bg-slate-800'
+                    : 'bg-slate-300 cursor-not-allowed'
+                    }`}
+                >
+                  <Save className="w-5 h-5" />
+                  {uploadingImage ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+
+            </form>
+          </motion.div>
+
         </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 sm:px-8 pt-20 pb-8">
-          <div className="space-y-6">
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Full Name
-                </div>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                placeholder="Enter your full name"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  Email Address
-                </div>
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                placeholder="your.email@example.com"
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  Phone Number
-                </div>
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                placeholder="+1 (555) 123-4567"
-              />
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Location
-                </div>
-              </label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                placeholder="City, Country"
-              />
-            </div>
-
-            {/* Bio */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Bio
-              </label>
-              <textarea
-                name="bio"
-                value={formData.bio}
-                onChange={handleChange}
-                rows={4}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all resize-none"
-                placeholder="Tell us about yourself..."
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 mt-8">
-            <button
-              type="submit"
-              disabled={!isEditing || uploadingImage}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${isEditing && !uploadingImage
-                  ? 'bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-lg shadow-violet-500/30'
-                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }`}
-            >
-              <Save className="w-5 h-5" />
-              {uploadingImage ? 'Uploading...' : 'Save Changes'}
-            </button>
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex-1 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-
-        {/* Additional Settings Sections */}
-        <div className="px-6 sm:px-8 pb-8 space-y-4">
-          <div className="border-t border-slate-200 pt-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Preferences</h3>
-            <div className="space-y-3">
-              <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors border border-slate-200">
-                <span className="text-sm font-medium text-slate-700">Email Notifications</span>
-                <input type="checkbox" className="w-5 h-5 rounded accent-violet-500" defaultChecked />
-              </label>
-              <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors border border-slate-200">
-                <span className="text-sm font-medium text-slate-700">Show Booking History</span>
-                <input type="checkbox" className="w-5 h-5 rounded accent-violet-500" defaultChecked />
-              </label>
-              <label className="flex items-center justify-between p-4 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors border border-slate-200">
-                <span className="text-sm font-medium text-slate-700">Marketing Emails</span>
-                <input type="checkbox" className="w-5 h-5 rounded accent-violet-500" />
-              </label>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
