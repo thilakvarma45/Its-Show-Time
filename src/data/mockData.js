@@ -1,4 +1,4 @@
-// Mock data for Its Show Time booking system
+// Mock data for Show Time booking system
 
 export const MOVIES = [
   {
@@ -274,7 +274,7 @@ export const OWNER_PROFILE = {
 export const VENUE_LIST = [
   {
     id: 1,
-    name: "Its Show Time Grand",
+    name: "Show Time Grand",
     location: "Downtown Plaza",
     address: "123 Main Street",
     pincode: "400001",
@@ -285,7 +285,7 @@ export const VENUE_LIST = [
   },
   {
     id: 2,
-    name: "Its Show Time Premium",
+    name: "Show Time Premium",
     location: "Mall Road",
     address: "456 Shopping District",
     pincode: "400002",
@@ -307,7 +307,7 @@ export const VENUE_LIST = [
   },
   {
     id: 4,
-    name: "Its Show Time Classic",
+    name: "Show Time Classic",
     location: "Heritage Quarter",
     address: "321 Old Town",
     pincode: "400004",

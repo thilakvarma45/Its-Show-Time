@@ -151,7 +151,7 @@ const HelpAndSupport = ({ onBack }) => {
         {
             id: 10,
             question: 'How do I contact customer support?',
-            answer: 'You can reach us via email at support@itsshowtime.com or call our helpline at 1800-123-4567 (toll-free). Our support team is available 24/7 to assist you with any queries.',
+            answer: 'You can reach us via email at support@showtime.com or call our helpline at 1800-123-4567 (toll-free). Our support team is available 24/7 to assist you with any queries.',
             category: 'Support'
         }
     ];

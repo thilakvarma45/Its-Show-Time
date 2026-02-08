@@ -516,7 +516,7 @@ const AppContent = () => {
                             <span className="text-2xl">🎬</span>
                           </div>
                           <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">SHOW TIME</h1>
                             <p className="text-xs text-slate-500 font-medium">Your Entertainment Hub</p>
                           </div>
                         </button>
@@ -583,7 +583,7 @@ const AppContent = () => {
                             <span className="text-2xl">🎬</span>
                           </div>
                           <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">SHOW TIME</h1>
                           </div>
                         </button>
                         <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
@@ -612,7 +612,7 @@ const AppContent = () => {
                             <span className="text-2xl">🎬</span>
                           </div>
                           <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">SHOW TIME</h1>
                           </div>
                         </button>
                         <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
@@ -641,7 +641,7 @@ const AppContent = () => {
                             <span className="text-2xl">🎬</span>
                           </div>
                           <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">SHOW TIME</h1>
                           </div>
                         </button>
                         <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
@@ -670,7 +670,7 @@ const AppContent = () => {
                             <span className="text-2xl">🎬</span>
                           </div>
                           <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">SHOW TIME</h1>
                           </div>
                         </button>
                         <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
@@ -699,7 +699,7 @@ const AppContent = () => {
                             <span className="text-2xl">🎬</span>
                           </div>
                           <div className="hidden sm:block">
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">ITS SHOW TIME</h1>
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight">SHOW TIME</h1>
                           </div>
                         </button>
                         <ProfileDropdown user={user} onLogout={handleLogout} onNavigate={handleProfileNavigation} />
@@ -746,7 +746,7 @@ const AppContent = () => {
                             </div>
                             <div className="hidden sm:block">
                               <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                                ITS SHOW TIME
+                                SHOW TIME
                               </h1>
                             </div>
                           </button>

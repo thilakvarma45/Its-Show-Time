@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, CheckCircle, Users, Search, DollarSign, MapPin, XCircle, Ticket } from 'lucide-react';
 
-const BookingDetails = ({ item, onBack }) => {
+const BookingDetails = ({ item, owner, onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTime, setFilterTime] = useState('all'); // placeholder for future backend-based filter
   const [bookings, setBookings] = useState([]);
@@ -69,8 +69,8 @@ const BookingDetails = ({ item, onBack }) => {
         const isMovie = item.type === 'movie';
         const idToUse = isMovie ? (item.tmdbMovieId ?? item.id) : item.id;
 
-        const analyticsUrl = `http://localhost:8080/api/analytics/${isMovie ? 'movie' : 'event'}/${idToUse}`;
-        const bookingsUrl = `http://localhost:8080/api/bookings/${isMovie ? 'movie' : 'event'}/${idToUse}`;
+        const analyticsUrl = `http://localhost:8080/api/analytics/${isMovie ? 'movie' : 'event'}/${idToUse}${item.ownerId ? `?ownerId=${item.ownerId}` : (owner?.id ? `?ownerId=${owner.id}` : '')}`;
+        const bookingsUrl = `http://localhost:8080/api/bookings/${isMovie ? 'movie' : 'event'}/${idToUse}${item.ownerId ? `?ownerId=${item.ownerId}` : (owner?.id ? `?ownerId=${owner.id}` : '')}`;
 
         // Fetch Analytics and Bookings in parallel
         const [analyticsRes, bookingsRes] = await Promise.all([
@@ -378,8 +378,8 @@ const BookingDetails = ({ item, onBack }) => {
 
                     <div className="md:text-right min-w-[120px]">
                       <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${booking.status === 'CANCELLED'
-                          ? 'bg-red-50 text-red-600'
-                          : 'bg-emerald-50 text-emerald-600'
+                        ? 'bg-red-50 text-red-600'
+                        : 'bg-emerald-50 text-emerald-600'
                         }`}>
                         {booking.status === 'CANCELLED' ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
                         {booking.status === 'CANCELLED' ? 'Cancelled' : 'Confirmed'}

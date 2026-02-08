@@ -77,7 +77,7 @@ const SmartScheduler = ({ owner }) => {
   const [uploadingEventImage, setUploadingEventImage] = useState(false);
 
   // Suggested time slots
-  const suggestedSlots = ['09:00 AM', '12:00 PM', '03:00 PM', '06:00 PM', '09:00 PM'];
+  const suggestedSlots = ['11:30 AM', '02:30 PM', '06:30 PM', '09:30 PM'];
 
   // Venues will be provided from backend / owner context instead of mock data
   const [venues, setVenues] = useState([]);
@@ -618,8 +618,8 @@ const SmartScheduler = ({ owner }) => {
                             className="w-full text-left px-6 py-4 hover:bg-indigo-50/50 flex items-center gap-4 transition-colors group"
                           >
                             <div className="w-10 h-14 bg-slate-200 rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
-                              {m.poster_path ? (
-                                <img src={`https://image.tmdb.org/t/p/w92${m.poster_path}`} alt="" className="w-full h-full object-cover" />
+                              {m.poster ? (
+                                <img src={m.poster} alt="" className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-slate-400"><Film className="w-4 h-4" /></div>
                               )}
@@ -627,11 +627,13 @@ const SmartScheduler = ({ owner }) => {
                             <div className="flex-1 min-w-0">
                               <div className="font-bold text-slate-900 text-lg truncate group-hover:text-indigo-700 transition-colors">{m.title}</div>
                               <div className="text-sm text-slate-500 flex items-center gap-2 mt-0.5">
-                                <span className="font-medium">{m.release_date ? m.release_date.split('-')[0] : 'TBA'}</span>
-                                {m.vote_average > 0 && (
+                                <span className="font-medium">{m.releaseDate ? m.releaseDate.split('-')[0] : 'TBA'}</span>
+                                <span className="mx-1.5 opacity-30">•</span>
+                                <span className="font-medium">{m.duration || 'N/A'}</span>
+                                {m.rating > 0 && (
                                   <>
-                                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                    <span className="text-amber-500 font-bold flex items-center gap-1">★ {m.vote_average.toFixed(1)}</span>
+                                    <span className="mx-1.5 opacity-30">•</span>
+                                    <span className="text-amber-500 font-bold flex items-center gap-1">★ {m.rating}</span>
                                   </>
                                 )}
                               </div>

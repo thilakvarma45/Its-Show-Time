@@ -8,11 +8,16 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
   const generatedDates = Array.from({ length: 14 }).map((_, idx) => {
     const d = new Date(today);
     d.setDate(today.getDate() + idx);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const fullDate = `${year}-${month}-${day}`;
+
     return {
       id: idx + 1,
       day: d.toLocaleDateString(undefined, { weekday: 'short' }),
       date: d.getDate(),
-      fullDate: d.toISOString().split('T')[0]
+      fullDate: fullDate
     };
   });
 

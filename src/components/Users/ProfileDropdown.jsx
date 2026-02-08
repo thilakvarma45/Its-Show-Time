@@ -74,7 +74,7 @@ const ProfileDropdown = ({ user, onLogout, onNavigate }) => {
             {user?.name || 'User'}
           </p>
           <p className="text-xs text-slate-500 font-medium">
-            {user?.role?.toLowerCase() === 'owner' ? 'Host' : 'Movie Lover'}
+            {user?.role?.toLowerCase() === 'owner' ? 'Host' : 'Cinephile'}
           </p>
         </div>
 

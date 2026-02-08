@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Calendar, ChevronRight, Search, SlidersHorizontal, Loader2, Ticket, TrendingUp, Users } from 'lucide-react';
+import { Film, Calendar, ChevronRight, Search, SlidersHorizontal, Loader2, Ticket, TrendingUp, Users, Trash2 } from 'lucide-react';
 import { getMovieById } from '../../services/tmdb';
 
 /**
@@ -16,16 +16,21 @@ const MovieListings = ({ onSelectShow, owner }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Load movies that have schedules/shows from backend
+  // Load movies that have schedules/shows from backend for this owner
   useEffect(() => {
     const loadScheduledMovies = async () => {
+      if (!owner?.id) {
+        setMovies([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:8080/api/shows/summary', {
+        const res = await fetch(`http://localhost:8080/api/shows/summary?ownerId=${owner.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }); // summary list per tmdbMovieId
+        }); // summary list per tmdbMovieId filtered by owner
         if (!res.ok) {
           throw new Error('Failed to load scheduled movies');
         }
@@ -68,7 +73,7 @@ const MovieListings = ({ onSelectShow, owner }) => {
       }
     };
     loadScheduledMovies();
-  }, []);
+  }, [owner]);
 
   // Load events for listings (from backend) - only events created by this owner
   useEffect(() => {
@@ -123,6 +128,46 @@ const MovieListings = ({ onSelectShow, owner }) => {
     return true;
   });
 
+  const handleDelete = async (e, item) => {
+    e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete "${item.title}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      // endpoint based on type
+      let url = '';
+      if (item.type === 'movie') {
+        url = `http://localhost:8080/api/shows/movie/${item.tmdbMovieId}?ownerId=${owner.id}`;
+      } else {
+        // For events, we might need a different endpoint, e.g. /api/events/{id}
+        // Assuming /api/events/{id}?ownerId=... for now or just alert
+        // The user specifically asked for "movie he hosted".
+        alert("Deleting events is not supported yet.");
+        return;
+      }
+
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        // Remove from local state immediately
+        if (item.type === 'movie') {
+          setMovies(prev => prev.filter(m => m.tmdbMovieId !== item.tmdbMovieId));
+        }
+      } else {
+        const msg = await res.text();
+        alert(`Failed to delete: ${msg}`);
+      }
+    } catch (err) {
+      console.error('Delete failed', err);
+      alert('Delete failed. Please try again.');
+    }
+  };
+
   return (
     <div className="space-y-8">
 
@@ -140,8 +185,8 @@ const MovieListings = ({ onSelectShow, owner }) => {
               key={type}
               onClick={() => setFilterType(type)}
               className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${filterType === type
-                  ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
-                  : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
+                : 'text-slate-500 hover:text-slate-700'
                 }`}
             >
               {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -209,11 +254,22 @@ const MovieListings = ({ onSelectShow, owner }) => {
                 {/* Floating Badge */}
                 <div className="absolute top-4 left-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-lg backdrop-blur-md ${item.type === 'movie'
-                      ? 'bg-blue-500/90 text-white'
-                      : 'bg-purple-500/90 text-white'
+                    ? 'bg-blue-500/90 text-white'
+                    : 'bg-purple-500/90 text-white'
                     }`}>
                     {item.type === 'movie' ? 'Movie' : 'Event'}
                   </span>
+                </div>
+
+                {/* Delete Button */}
+                <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => handleDelete(e, item)}
+                    title="Delete Listing"
+                    className="p-2 bg-white/90 rounded-full hover:bg-red-500 hover:text-white text-slate-400 transition-all shadow-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
 
                 {/* Content Overlay */}

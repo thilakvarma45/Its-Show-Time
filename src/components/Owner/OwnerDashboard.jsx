@@ -173,7 +173,7 @@ const OwnerDashboard = ({ user }) => {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <BookingDetails item={selectedShow} onBack={handleBackToListings} />
+                  <BookingDetails item={selectedShow} owner={user} onBack={handleBackToListings} />
                 </motion.div>
               ) : activeView === 'LISTINGS' ? (
                 <motion.div

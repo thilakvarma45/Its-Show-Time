@@ -86,7 +86,7 @@ const LandingPage = () => {
             <div className="w-8 h-8 md:w-10 md:h-10 bg-black text-white rounded-full flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-500 shadow-2xl">
               <Ticket className="w-4 h-4 md:w-5 md:h-5" />
             </div>
-            <span className="text-lg md:text-xl font-black tracking-tight text-slate-900">ShowTime.</span>
+            <span className="text-lg md:text-xl font-black tracking-tight text-slate-900">Show Time</span>
           </Link>
 
           <div className="flex items-center gap-2 bg-white/70 p-1.5 md:p-2 rounded-full shadow-lg shadow-black/5 border border-white/20 backdrop-blur-xl hover:bg-white/90 transition-all">
@@ -157,13 +157,13 @@ const LandingPage = () => {
           <h1 className="text-6xl md:text-9xl font-black leading-[0.9] tracking-tighter mb-8 drop-shadow-2xl">
             <span className="text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)]">BOOK THE</span> <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/80 drop-shadow-[0_10px_20px_rgba(0,0,0,1)] filter">
-              MOMENT.
+              MOMENT
             </span>
           </h1>
 
           <p className="text-lg md:text-2xl text-white/90 max-w-xl mx-auto mb-10 font-medium leading-relaxed drop-shadow-md">
-            Cinema, Concerts, Sports & More. <br className="hidden md:block" />
-            Access the best events with zero friction.
+            Cinema, Concerts, Sports & More <br className="hidden md:block" />
+            Access the best events with zero friction
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 pointer-events-auto w-full sm:w-auto px-6 sm:px-0">
@@ -182,7 +182,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4">Why ShowTime?</h2>
-            <p className="text-slate-500 text-lg">A unified platform for everyone.</p>
+            <p className="text-slate-500 text-lg">A unified platform for everyone</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
@@ -191,7 +191,7 @@ const LandingPage = () => {
               <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
                 <Users className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-black mb-4">For Fans</h3>
+              <h3 className="text-2xl font-black mb-4">For Cinephiles</h3>
               <ul className="space-y-3">
                 {[
                   "No hidden fees or surprise charges",
@@ -211,7 +211,7 @@ const LandingPage = () => {
               <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center mb-6 text-indigo-600 shadow-sm">
                 <TrendingUp className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-black mb-4 text-slate-900">For Venues</h3>
+              <h3 className="text-2xl font-black mb-4 text-slate-900">For Owners</h3>
               <ul className="space-y-3">
                 {[
                   "Real-time revenue analytics dashboard",
@@ -235,7 +235,7 @@ const LandingPage = () => {
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
             <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1]">
               Engineered for <br />
-              <span className="text-slate-400">Pure Joy.</span>
+              <span className="text-slate-400">Pure Joy</span>
             </h2>
           </div>
 
@@ -428,10 +428,10 @@ const LandingPage = () => {
               <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
                 <Ticket className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-lg">ShowTime.</span>
+              <span className="font-bold text-lg">ShowTime</span>
             </div>
             <p className="text-slate-500 max-w-xs text-sm leading-relaxed">
-              Redefining entertainment booking.
+              Redefining entertainment booking
             </p>
           </div>
         </div>
