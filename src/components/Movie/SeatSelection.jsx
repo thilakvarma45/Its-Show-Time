@@ -42,7 +42,7 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
       try {
         const token = localStorage.getItem('token');
         const response = await fetch(
-          `http://localhost:8080/api/bookings/show/${selectedShow.showId}/blocked-seats`,
+          `https://its-show-time-backend-production.up.railway.app/api/bookings/show/${selectedShow.showId}/blocked-seats`,
           {
             headers: { 'Authorization': `Bearer ${token}` }
           }
@@ -436,3 +436,4 @@ const SeatSelection = ({ selectedShow, onContinue, initialSelectedSeats = [] }) 
 };
 
 export default SeatSelection;
+

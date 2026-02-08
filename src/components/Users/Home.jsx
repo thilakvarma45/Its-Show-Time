@@ -124,7 +124,7 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const res = await fetch('http://localhost:8080/api/events');
+        const res = await fetch('https://its-show-time-backend-production.up.railway.app/api/events');
         if (!res.ok) {
           throw new Error('Failed to load events');
         }
@@ -747,3 +747,4 @@ const Home = ({ onMovieSelect, onEventSelect, user, wishlist = [], onToggleWishl
 };
 
 export default Home;
+

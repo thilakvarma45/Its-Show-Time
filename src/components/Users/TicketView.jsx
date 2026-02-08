@@ -28,8 +28,8 @@ const TicketView = () => {
         const isCode = raw.toUpperCase().startsWith('BK');
 
         const response = isCode
-          ? await fetch(`http://localhost:8080/api/bookings/public/${encodeURIComponent(raw)}`)
-          : await fetch(`http://localhost:8080/api/bookings/${encodeURIComponent(raw)}`, {
+          ? await fetch(`https://its-show-time-backend-production.up.railway.app/api/bookings/public/${encodeURIComponent(raw)}`)
+          : await fetch(`https://its-show-time-backend-production.up.railway.app/api/bookings/${encodeURIComponent(raw)}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
           });
 
@@ -102,7 +102,7 @@ const TicketView = () => {
     try {
       const isTmdb = src.startsWith('https://image.tmdb.org/');
       const fetchUrl = isTmdb
-        ? `http://localhost:8080/api/upload/tmdb-proxy?url=${encodeURIComponent(src)}`
+        ? `https://its-show-time-backend-production.up.railway.app/api/upload/tmdb-proxy?url=${encodeURIComponent(src)}`
         : src;
 
       const res = await fetch(fetchUrl);
@@ -401,3 +401,4 @@ const TicketView = () => {
 };
 
 export default TicketView;
+

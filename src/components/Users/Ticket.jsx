@@ -20,7 +20,7 @@ const Ticket = ({ bookingDetails, onNewBooking }) => {
     try {
       const isTmdb = src.startsWith('https://image.tmdb.org/');
       const fetchUrl = isTmdb
-        ? `http://localhost:8080/api/upload/tmdb-proxy?url=${encodeURIComponent(src)}`
+        ? `https://its-show-time-backend-production.up.railway.app/api/upload/tmdb-proxy?url=${encodeURIComponent(src)}`
         : src;
 
       const res = await fetch(fetchUrl);
@@ -268,4 +268,5 @@ const Ticket = ({ bookingDetails, onNewBooking }) => {
 };
 
 export default Ticket;
+
 

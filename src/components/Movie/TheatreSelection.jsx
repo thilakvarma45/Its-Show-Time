@@ -31,7 +31,7 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
   useEffect(() => {
     const loadAllDates = async () => {
       try {
-        const res = await fetch('http://localhost:8080/api/venues');
+        const res = await fetch('https://its-show-time-backend-production.up.railway.app/api/venues');
         if (!res.ok) return;
 
         const venues = await res.json();
@@ -48,8 +48,8 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
               theatreVenues.map(async (venue) => {
                 try {
                   const url = movieId
-                    ? `http://localhost:8080/api/shows/venue/${venue.id}?date=${date.fullDate}&movieId=${movieId}`
-                    : `http://localhost:8080/api/shows/venue/${venue.id}?date=${date.fullDate}`;
+                    ? `https://its-show-time-backend-production.up.railway.app/api/shows/venue/${venue.id}?date=${date.fullDate}&movieId=${movieId}`
+                    : `https://its-show-time-backend-production.up.railway.app/api/shows/venue/${venue.id}?date=${date.fullDate}`;
 
                   const showRes = await fetch(url);
                   if (!showRes.ok) return false;
@@ -82,7 +82,7 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
   useEffect(() => {
     const loadTheatres = async () => {
       try {
-        const res = await fetch('http://localhost:8080/api/venues');
+        const res = await fetch('https://its-show-time-backend-production.up.railway.app/api/venues');
         if (!res.ok) {
           throw new Error('Failed to load venues');
         }
@@ -100,8 +100,8 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
           theatreVenues.map(async (venue) => {
             try {
               const url = movieId
-                ? `http://localhost:8080/api/shows/venue/${venue.id}?date=${isoDate}&movieId=${movieId}`
-                : `http://localhost:8080/api/shows/venue/${venue.id}?date=${isoDate}`;
+                ? `https://its-show-time-backend-production.up.railway.app/api/shows/venue/${venue.id}?date=${isoDate}&movieId=${movieId}`
+                : `https://its-show-time-backend-production.up.railway.app/api/shows/venue/${venue.id}?date=${isoDate}`;
 
               const showRes = await fetch(url);
               if (!showRes.ok) {
@@ -369,4 +369,5 @@ const TheatreSelection = ({ onTimeSelect, selectedShow, movieId }) => {
 };
 
 export default TheatreSelection;
+
 
